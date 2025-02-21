@@ -1,6 +1,6 @@
 #Texas Instruments AM62 dual core 1GB USB2 DDR4
 
-BOARD_NAME="BEAGLEBOARD-POCKETBEAGLE2"
+BOARD_NAME="BeagleBoard.org PocketBeagle 2"
 BOARDFAMILY="k3"
 BOARD_MAINTAINER="grippy98"
 BOOTCONFIG="am6232_pocketbeagle2_a53_defconfig"
