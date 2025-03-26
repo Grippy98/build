@@ -23,8 +23,7 @@ function post_install_kernel_debs__install_ti_packages() {
 		chroot_sdcard "wget -qO /tmp/ti-debpkgs.sources https://raw.githubusercontent.com/TexasInstruments/ti-debpkgs/main/ti-debpkgs.sources"
 		echo "✅ Got ti-debpkgs.sources..."
 
-		# Extract and update suite on host
-		chroot_sdcard "current_suite=\$(grep -oP '(?<=Suites: )[a-zA-Z0-9]+' /tmp/ti-debpkgs.sources)"
+		# Update suite in sources file
 		chroot_sdcard "sed -i 's/Suite=\${current_suite}/Suite=${RELEASE}/g' /tmp/ti-debpkgs.sources"
 		echo "✅ Updated Suite to ${RELEASE}..."
 
