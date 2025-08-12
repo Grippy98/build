@@ -55,8 +55,9 @@ config/boards/helios4.conf		@Heisath
 config/boards/helios64.conf		@prahal
 config/boards/hinlink-h28k.csc		@sputnik2019
 config/boards/hinlink-ht2.csc		@hoochiwetech
+config/boards/imb3588.conf		@JackHuang021
 config/boards/indiedroid-nova.csc		@lanefu
-config/boards/inovato-quadra.conf		@NicoD-SBC
+config/boards/inovato-quadra.conf		@igorpecovnik
 config/boards/jethubj100.conf		@adeepn
 config/boards/jethubj200.conf		@adeepn
 config/boards/jethubj80.conf		@adeepn
@@ -68,6 +69,7 @@ config/boards/khadas-vim2.conf		@igorpecovnik
 config/boards/khadas-vim3.conf		@NicoD-SBC @rpardini
 config/boards/khadas-vim3l.conf		@rpardini
 config/boards/khadas-vim4.conf		@adeepn @rpardini @viraniac
+config/boards/kickpik2b.csc		@pyavitz
 config/boards/lafrite.conf		@Tonymac32
 config/boards/leez-p710.csc		@andyshrk
 config/boards/lepotato.conf		@Tonymac32
@@ -77,15 +79,13 @@ config/boards/lubancat2.csc		@andyshrk
 config/boards/mangopi-m28k.csc		@sputnik2019
 config/boards/mba8mpxl-ras314.conf		@schmiedelm
 config/boards/mba8mpxl.conf		@schmiedelm
-config/boards/mekotronics-r58-minipc.conf		@monkaBlyat
-config/boards/mekotronics-r58x-4g.csc		@monkaBlyat
-config/boards/mekotronics-r58x.conf		@monkaBlyat
 config/boards/mixtile-blade3.csc		@rpardini
 config/boards/mksklipad50.conf		@torte71
 config/boards/mkspi.csc		@redrathnure
 config/boards/nanopct6-lts.conf		@SuperKali @Tonymac32
 config/boards/nanopct6.conf		@SuperKali @Tonymac32
 config/boards/nanopi-m6.conf		@efectn
+config/boards/nanopi-r3s-lts.conf		@pyavitz
 config/boards/nanopi-r5s.csc		@utlark
 config/boards/nanopi-r6c.csc		@ColorfulRhino
 config/boards/nanopi-r6s.conf		@efectn
@@ -121,7 +121,7 @@ config/boards/orangepizeroplus.csc		@schwar3kat
 config/boards/phytiumpi.conf		@chainsx
 config/boards/pine64.conf		@PanderMusubi
 config/boards/pinebook-pro.csc		@TRSx80 @ahoneybun
-config/boards/pocketbeagle2.csc		@Grippy98
+config/boards/pocketbeagle2.conf		@Grippy98
 config/boards/pocketchip-sd.csc		@TheSnowfield
 config/boards/qcom-robotics-rb5.conf		@FantasyGmm
 config/boards/qemu-uboot-arm64.csc		@rpardini
@@ -132,7 +132,6 @@ config/boards/radxa-e25.csc		@krachlatte
 config/boards/radxa-e52c.conf		@amazingfate
 config/boards/radxa-nio-12l.conf		@HeyMeco
 config/boards/radxa-zero.conf		@clee @engineer-80
-config/boards/radxa-zero2.csc		@monkaBlyat
 config/boards/recore.csc		@eliasbakken
 config/boards/renegade.conf		@Tonymac32
 config/boards/retro-lite-cm5.csc		@ginkage
@@ -184,20 +183,20 @@ config/kernel/linux-k3-*.config		@Grippy98 @glneo
 config/kernel/linux-k3-beagle-*.config		@Grippy98
 config/kernel/linux-meson-*.config		@hzyitc @juanlufont
 config/kernel/linux-meson-s4t7-*.config		@adeepn @rpardini @viraniac
-config/kernel/linux-meson64-*.config		@NicoD-SBC @SteeManMI @Tonymac32 @adeepn @clee @engineer-80 @igorpecovnik @jeanrhum @jomadeto @monkaBlyat @pyavitz @rpardini @teknoid
+config/kernel/linux-meson64-*.config		@NicoD-SBC @SteeManMI @Tonymac32 @adeepn @clee @engineer-80 @igorpecovnik @jeanrhum @jomadeto @pyavitz @rpardini @teknoid
 config/kernel/linux-mvebu-*.config		@Heisath
 config/kernel/linux-odroidxu4-*.config		@joekhoobyar
 config/kernel/linux-phytium-embedded-*.config		@chainsx
-config/kernel/linux-rk35xx-*.config		@CodeChenL @ColorfulRhino @HeyMeco @SeeleVolleri @SuperKali @Tonymac32 @ZazaBR @alexl83 @amazingfate @catalinii @chainsx @efectn @fridtjof @ginkage @hoochiwetech @hqnicolas @krachlatte @lanefu @linhz0hz @mahdichi @mattx433 @monkaBlyat @prahal @rpardini @schwar3kat @sputnik2019 @vamzii
+config/kernel/linux-rk35xx-*.config		@CodeChenL @ColorfulRhino @HeyMeco @JackHuang021 @SeeleVolleri @SuperKali @Tonymac32 @ZazaBR @alexl83 @amazingfate @andyshrk @catalinii @chainsx @efectn @fridtjof @ginkage @hoochiwetech @hqnicolas @krachlatte @lanefu @linhz0hz @mahdichi @mattx433 @prahal @rpardini @schwar3kat @sputnik2019 @vamzii
 config/kernel/linux-rockchip-*.config		@paolosabatino
-config/kernel/linux-rockchip64-*.config		@150balbes @ColorfulRhino @HeyMeco @JohnTheCoolingFan @SuperKali @TRSx80 @TheSnowfield @Tonymac32 @ZazaBR @ahoneybun @alexl83 @amazingfate @andyshrk @brentr @catalinii @clee @efectn @fridtjof @hqnicolas @igorpecovnik @joekhoobyar @krachlatte @lanefu @linhz0hz @mlegenovic @paolosabatino @prahal @redrathnure @rpardini @schwar3kat @sicXnull @tdleiyao @torte71 @utlark @vamzii
+config/kernel/linux-rockchip64-*.config		@150balbes @ColorfulRhino @HeyMeco @JohnTheCoolingFan @SuperKali @TRSx80 @TheSnowfield @Tonymac32 @ZazaBR @ahoneybun @alexl83 @amazingfate @andyshrk @brentr @catalinii @chainsx @clee @efectn @fridtjof @hqnicolas @igorpecovnik @joekhoobyar @krachlatte @lanefu @linhz0hz @mlegenovic @paolosabatino @prahal @pyavitz @redrathnure @rpardini @schwar3kat @sicXnull @tdleiyao @torte71 @utlark @vamzii
 config/kernel/linux-sm8250-*.config		@FantasyGmm @amazingfate
 config/kernel/linux-sm8550-*.config		@FantasyGmm
 config/kernel/linux-spacemit-*.config		@pyavitz
 config/kernel/linux-starfive2-*.config		@libiunc
 config/kernel/linux-sun55iw3-syterkit-*.config		@chainsx
 config/kernel/linux-sunxi-*.config		@1ubuntuuser @AaronNGray @DylanHP @Janmcha @StephenGraf @TheSnowfield @Tonymac32 @janprunk @lbmendes @leggewie @mhawkins-consultant @sgjava @spendist
-config/kernel/linux-sunxi64-*.config		@AGM1968 @IsMrX @JohnTheCoolingFan @Kreyren @NicoD-SBC @PanderMusubi @Ressetkk @The-going @Tonymac32 @alexl83 @chraac @devdotnetorg @eliasbakken @krachlatte @pyavitz @schwar3kat @sicXnull @spendist @teknoid
+config/kernel/linux-sunxi64-*.config		@AGM1968 @IsMrX @JohnTheCoolingFan @Kreyren @PanderMusubi @Ressetkk @The-going @Tonymac32 @alexl83 @chraac @devdotnetorg @eliasbakken @igorpecovnik @krachlatte @pyavitz @schwar3kat @sicXnull @spendist @teknoid
 config/kernel/linux-thead-*.config		@chainsx
 config/kernel/linux-tqma-*.config		@schmiedelm
 config/kernel/linux-uefi-arm64-*.config		@rpardini
@@ -207,16 +206,16 @@ config/kernel/linux-wsl2-x86-*.config		@rpardini
 patch/atf/atf-arm64/		@PeterChrz @rpardini
 patch/atf/atf-bcm2711/		@PanderMusubi @teknoid
 patch/atf/atf-genio/		@HeyMeco
-patch/atf/atf-imx8m/		@schmiedelm
+patch/atf/atf-imx8/		@schmiedelm
 patch/atf/atf-k3-beagle/		@Grippy98
 patch/atf/atf-k3/		@Grippy98 @glneo
 patch/atf/atf-phytium-embedded/		@chainsx
-patch/atf/atf-rockchip64/		@ColorfulRhino @TRSx80 @ahoneybun @andyshrk @clee @joekhoobyar @paolosabatino @prahal
+patch/atf/atf-rockchip64/		@ColorfulRhino @SuperKali @TRSx80 @Tonymac32 @ahoneybun @andyshrk @clee @joekhoobyar @paolosabatino @prahal
 patch/atf/atf-sm8250/		@FantasyGmm @amazingfate
 patch/atf/atf-sm8550/		@FantasyGmm
 patch/atf/atf-spacemit/		@pyavitz
 patch/atf/atf-sun55iw3-syterkit/		@chainsx
-patch/atf/atf-sunxi64/		@AGM1968 @IsMrX @JohnTheCoolingFan @Kreyren @NicoD-SBC @PanderMusubi @Ressetkk @The-going @Tonymac32 @alexl83 @chraac @devdotnetorg @eliasbakken @krachlatte @pyavitz @schwar3kat @sicXnull @spendist @teknoid
+patch/atf/atf-sunxi64/		@AGM1968 @IsMrX @JohnTheCoolingFan @Kreyren @PanderMusubi @Ressetkk @The-going @Tonymac32 @alexl83 @chraac @devdotnetorg @eliasbakken @igorpecovnik @krachlatte @pyavitz @schwar3kat @sicXnull @spendist @teknoid
 patch/atf/atf-wsl2-arm64/		@rpardini
 patch/kernel/archive/bcm2711-*/		@PanderMusubi @teknoid
 patch/kernel/archive/imx8m-*/		@schmiedelm
@@ -224,22 +223,22 @@ patch/kernel/archive/k3-*/		@Grippy98 @glneo
 patch/kernel/archive/k3-beagle-*/		@Grippy98
 patch/kernel/archive/meson-*/		@hzyitc @juanlufont
 patch/kernel/archive/meson-s4t7-*/		@adeepn @rpardini @viraniac
-patch/kernel/archive/meson64-*/		@NicoD-SBC @SteeManMI @Tonymac32 @adeepn @clee @engineer-80 @igorpecovnik @jeanrhum @jomadeto @monkaBlyat @pyavitz @rpardini @teknoid
+patch/kernel/archive/meson64-*/		@NicoD-SBC @SteeManMI @Tonymac32 @adeepn @clee @engineer-80 @igorpecovnik @jeanrhum @jomadeto @pyavitz @rpardini @teknoid
 patch/kernel/archive/mvebu-*/		@Heisath
 patch/kernel/archive/odroidxu4-*/		@joekhoobyar
 patch/kernel/archive/rockchip-*/		@paolosabatino
-patch/kernel/archive/rockchip64-*/		@150balbes @ColorfulRhino @HeyMeco @JohnTheCoolingFan @SuperKali @TRSx80 @TheSnowfield @Tonymac32 @ZazaBR @ahoneybun @alexl83 @amazingfate @andyshrk @brentr @catalinii @clee @efectn @fridtjof @hqnicolas @igorpecovnik @joekhoobyar @krachlatte @lanefu @linhz0hz @mlegenovic @paolosabatino @prahal @redrathnure @rpardini @schwar3kat @sicXnull @tdleiyao @torte71 @utlark @vamzii
+patch/kernel/archive/rockchip64-*/		@150balbes @ColorfulRhino @HeyMeco @JohnTheCoolingFan @SuperKali @TRSx80 @TheSnowfield @Tonymac32 @ZazaBR @ahoneybun @alexl83 @amazingfate @andyshrk @brentr @catalinii @chainsx @clee @efectn @fridtjof @hqnicolas @igorpecovnik @joekhoobyar @krachlatte @lanefu @linhz0hz @mlegenovic @paolosabatino @prahal @pyavitz @redrathnure @rpardini @schwar3kat @sicXnull @tdleiyao @torte71 @utlark @vamzii
 patch/kernel/archive/sm8250-*/		@FantasyGmm @amazingfate
 patch/kernel/archive/sm8550-*/		@FantasyGmm
 patch/kernel/archive/spacemit-*/		@pyavitz
-patch/kernel/archive/sunxi-*/		@1ubuntuuser @AGM1968 @AaronNGray @DylanHP @IsMrX @Janmcha @JohnTheCoolingFan @Kreyren @NicoD-SBC @PanderMusubi @Ressetkk @StephenGraf @The-going @TheSnowfield @Tonymac32 @alexl83 @chraac @devdotnetorg @eliasbakken @janprunk @krachlatte @lbmendes @leggewie @mhawkins-consultant @pyavitz @schwar3kat @sgjava @sicXnull @spendist @teknoid
+patch/kernel/archive/sunxi-*/		@1ubuntuuser @AGM1968 @AaronNGray @DylanHP @IsMrX @Janmcha @JohnTheCoolingFan @Kreyren @PanderMusubi @Ressetkk @StephenGraf @The-going @TheSnowfield @Tonymac32 @alexl83 @chraac @devdotnetorg @eliasbakken @igorpecovnik @janprunk @krachlatte @lbmendes @leggewie @mhawkins-consultant @pyavitz @schwar3kat @sgjava @sicXnull @spendist @teknoid
 patch/kernel/archive/uefi-arm64-*/		@PeterChrz @rpardini
 patch/kernel/archive/uefi-x86-*/		@davidandreoletti @rpardini
 patch/kernel/archive/wsl2-arm64-*/		@rpardini
 patch/kernel/archive/wsl2-x86-*/		@rpardini
 patch/kernel/genio-1200-*/		@HeyMeco
 patch/kernel/phytium-embedded-*/		@chainsx
-patch/kernel/rk35xx-vendor-*/		@CodeChenL @ColorfulRhino @HeyMeco @SeeleVolleri @SuperKali @Tonymac32 @ZazaBR @alexl83 @amazingfate @catalinii @chainsx @efectn @fridtjof @ginkage @hoochiwetech @hqnicolas @krachlatte @lanefu @linhz0hz @mahdichi @mattx433 @monkaBlyat @prahal @rpardini @schwar3kat @sputnik2019 @vamzii
+patch/kernel/rk35xx-vendor-*/		@CodeChenL @ColorfulRhino @HeyMeco @JackHuang021 @SeeleVolleri @SuperKali @Tonymac32 @ZazaBR @alexl83 @amazingfate @andyshrk @catalinii @chainsx @efectn @fridtjof @ginkage @hoochiwetech @hqnicolas @krachlatte @lanefu @linhz0hz @mahdichi @mattx433 @prahal @rpardini @schwar3kat @sputnik2019 @vamzii
 patch/kernel/starfive2-*/		@libiunc
 patch/kernel/sun55iw3-syterkit-*/		@chainsx
 patch/kernel/thead-*/		@chainsx
@@ -248,7 +247,7 @@ patch/u-boot/legacy/		@chainsx @joekhoobyar @juanlufont @lanefu
 patch/u-boot/legacy/u-boot-clearfog/		@Heisath
 patch/u-boot/legacy/u-boot-helios4/		@Heisath
 patch/u-boot/legacy/u-boot-khadas-edge2-rk3588/		@efectn
-patch/u-boot/legacy/u-boot-radxa-rk35xx/		@CodeChenL @HeyMeco @SeeleVolleri @SuperKali @Tonymac32 @ZazaBR @alexl83 @amazingfate @catalinii @chainsx @efectn @fridtjof @ginkage @hoochiwetech @hqnicolas @krachlatte @linhz0hz @mahdichi @mattx433 @monkaBlyat @prahal @rpardini @schwar3kat @sputnik2019 @tdleiyao @vamzii
+patch/u-boot/legacy/u-boot-radxa-rk35xx/		@CodeChenL @HeyMeco @JackHuang021 @SeeleVolleri @SuperKali @Tonymac32 @ZazaBR @alexl83 @amazingfate @catalinii @chainsx @efectn @fridtjof @ginkage @hoochiwetech @hqnicolas @krachlatte @linhz0hz @mahdichi @mattx433 @prahal @rpardini @schwar3kat @sputnik2019 @tdleiyao @vamzii
 patch/u-boot/legacy/u-boot-spacemit-k1/		@pyavitz
 patch/u-boot/u-boot-beagle/		@Grippy98
 patch/u-boot/u-boot-k3-beagle/		@Grippy98
@@ -258,8 +257,8 @@ patch/u-boot/u-boot-qemu-arm64/		@rpardini
 patch/u-boot/u-boot-qemu-x86/		@rpardini
 patch/u-boot/u-boot-rockchip64-v2022.04/		@TRSx80 @ahoneybun @paolosabatino
 patch/u-boot/u-boot-rockchip64/		@Tonymac32 @andyshrk @clee @igorpecovnik @prahal @redrathnure @sicXnull
-patch/u-boot/u-boot-sunxi-crust/		@AGM1968 @Kreyren @NicoD-SBC @PanderMusubi @Tonymac32 @devdotnetorg @schwar3kat @spendist @teknoid
-patch/u-boot/u-boot-sunxi/		@1ubuntuuser @AGM1968 @DylanHP @Janmcha @JohnTheCoolingFan @Kreyren @NicoD-SBC @PanderMusubi @Ressetkk @StephenGraf @TheSnowfield @Tonymac32 @alexl83 @chraac @devdotnetorg @eliasbakken @janprunk @krachlatte @lbmendes @leggewie @mhawkins-consultant @schwar3kat @sgjava @sicXnull @spendist @teknoid
+patch/u-boot/u-boot-sunxi-crust/		@AGM1968 @Kreyren @PanderMusubi @Tonymac32 @devdotnetorg @igorpecovnik @schwar3kat @spendist @teknoid
+patch/u-boot/u-boot-sunxi/		@1ubuntuuser @AGM1968 @DylanHP @Janmcha @JohnTheCoolingFan @Kreyren @PanderMusubi @Ressetkk @StephenGraf @TheSnowfield @Tonymac32 @devdotnetorg @eliasbakken @igorpecovnik @janprunk @krachlatte @lbmendes @leggewie @mhawkins-consultant @schwar3kat @sgjava @sicXnull @spendist @teknoid
 patch/u-boot/u-boot-sunxi/board_bananapim3/		@AaronNGray
 patch/u-boot/u-boot-tqma/		@schmiedelm
 patch/u-boot/v2022.01/		@teknoid
@@ -270,17 +269,18 @@ patch/u-boot/v2023.10/		@adeepn
 patch/u-boot/v2024.01/		@Tonymac32 @rpardini
 patch/u-boot/v2024.01/board_orangepi5/		@efectn
 patch/u-boot/v2024.04-rock5b-radxa/		@amazingfate @linhz0hz
-patch/u-boot/v2024.04/		@Tonymac32 @chraac @igorpecovnik @pyavitz @utlark
+patch/u-boot/v2024.04/		@Tonymac32 @utlark
 patch/u-boot/v2024.07-coolpi-cm5/		@andyshrk
-patch/u-boot/v2024.07/		@adeepn @igorpecovnik @monkaBlyat
+patch/u-boot/v2024.07/		@adeepn @igorpecovnik
 patch/u-boot/v2024.07/board_station-m1/		@150balbes
-patch/u-boot/v2024.10/		@HeyMeco @alexl83 @brentr @fridtjof @pyavitz
+patch/u-boot/v2024.10/		@alexl83 @brentr @pyavitz
 patch/u-boot/v2024.10/board_bigtreetech-cb2/		@JohnTheCoolingFan
-patch/u-boot/v2025-sunxi/		@The-going
+patch/u-boot/v2025-sunxi/		@The-going @alexl83 @chraac
 patch/u-boot/v2025.01-rc3-coolpi-cm5/		@andyshrk
 patch/u-boot/v2025.01/		@ColorfulRhino @efectn @jeanrhum @joekhoobyar @paolosabatino @pyavitz @rpardini @torte71
 patch/u-boot/v2025.01/board_h96-tvbox-3566/		@hqnicolas
-patch/u-boot/v2025.04/		@IsMrX @NicoD-SBC @SuperKali @TheSnowfield @Tonymac32 @ZazaBR @amazingfate @andyshrk @catalinii @mlegenovic @rpardini @vamzii
+patch/u-boot/v2025.04/		@HeyMeco @IsMrX @NicoD-SBC @SuperKali @TheSnowfield @Tonymac32 @ZazaBR @amazingfate @andyshrk @catalinii @fridtjof @igorpecovnik @mlegenovic @pyavitz @rpardini @vamzii
+patch/u-boot/v2025.07/		@pyavitz
 sources/families/bcm2711.conf		@PanderMusubi @teknoid
 sources/families/genio.conf		@HeyMeco
 sources/families/imx8m.conf		@schmiedelm
@@ -288,7 +288,7 @@ sources/families/jethub.conf		@adeepn
 sources/families/k3.conf		@Grippy98 @glneo
 sources/families/meson-axg.conf		@pyavitz
 sources/families/meson-g12a.conf		@clee @engineer-80
-sources/families/meson-g12b.conf		@NicoD-SBC @Tonymac32 @jeanrhum @monkaBlyat @pyavitz @rpardini
+sources/families/meson-g12b.conf		@NicoD-SBC @Tonymac32 @jeanrhum @pyavitz @rpardini
 sources/families/meson-gxbb.conf		@teknoid
 sources/families/meson-gxl.conf		@SteeManMI @Tonymac32 @igorpecovnik @jomadeto
 sources/families/meson-s4t7.conf		@adeepn @rpardini @viraniac
@@ -297,8 +297,8 @@ sources/families/meson8b.conf		@hzyitc @juanlufont
 sources/families/mvebu.conf		@Heisath
 sources/families/odroidxu4.conf		@joekhoobyar
 sources/families/phytium-embedded.conf		@chainsx
-sources/families/rk35xx.conf		@CodeChenL @ZazaBR @amazingfate @andyshrk @catalinii @hoochiwetech @hqnicolas @krachlatte @mattx433 @sputnik2019 @tdleiyao @vamzii
-sources/families/rockchip-rk3588.conf		@ColorfulRhino @HeyMeco @SeeleVolleri @SuperKali @Tonymac32 @alexl83 @amazingfate @andyshrk @chainsx @efectn @fridtjof @ginkage @lanefu @linhz0hz @mahdichi @monkaBlyat @prahal @rpardini @schwar3kat
+sources/families/rk35xx.conf		@CodeChenL @ZazaBR @amazingfate @andyshrk @catalinii @hoochiwetech @hqnicolas @krachlatte @mattx433 @pyavitz @sputnik2019 @tdleiyao @vamzii
+sources/families/rockchip-rk3588.conf		@ColorfulRhino @HeyMeco @JackHuang021 @SeeleVolleri @SuperKali @Tonymac32 @alexl83 @amazingfate @andyshrk @chainsx @efectn @fridtjof @ginkage @lanefu @linhz0hz @mahdichi @prahal @rpardini @schwar3kat
 sources/families/rockchip.conf		@paolosabatino
 sources/families/rockchip64.conf		@150balbes @JohnTheCoolingFan @TRSx80 @TheSnowfield @Tonymac32 @ahoneybun @andyshrk @brentr @clee @hqnicolas @igorpecovnik @joekhoobyar @mlegenovic @paolosabatino @prahal @redrathnure @rpardini @sicXnull @torte71 @utlark
 sources/families/sm8250.conf		@FantasyGmm @amazingfate
@@ -307,7 +307,7 @@ sources/families/spacemit.conf		@pyavitz
 sources/families/starfive2.conf		@libiunc
 sources/families/sun50iw1.conf		@Kreyren @PanderMusubi @devdotnetorg @eliasbakken
 sources/families/sun50iw2.conf		@AGM1968 @Tonymac32 @schwar3kat @spendist @teknoid
-sources/families/sun50iw6.conf		@NicoD-SBC
+sources/families/sun50iw6.conf		@igorpecovnik
 sources/families/sun50iw9-bpi.conf		@The-going @pyavitz
 sources/families/sun50iw9.conf		@AGM1968 @IsMrX @JohnTheCoolingFan @Ressetkk @alexl83 @chraac @krachlatte @sicXnull
 sources/families/sun55iw3-syterkit.conf		@chainsx

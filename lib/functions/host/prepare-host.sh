@@ -203,7 +203,6 @@ function adaptative_prepare_host_dependencies() {
 		udev # causes initramfs rebuild, but is usually pre-installed.
 		uuid-dev
 		zlib1g-dev
-		gcc-arm-linux-gnueabi # necessary for rockchip64 (and maybe other too) ATF compilation  
 
 		# by-category below
 		file tree expect                         # logging utilities; expect is needed for 'unbuffer' command
@@ -228,6 +227,12 @@ function adaptative_prepare_host_dependencies() {
 	# Needed for some u-boot's, lest "tools/mkeficapsule.c:21:10: fatal error: gnutls/gnutls.h"
 	host_dependencies+=("libgnutls28-dev")
 
+	# Some versions of U-Boot do not require/import 'python3-setuptools' properly, so add them explicitly.
+	if [[ 'tag:v2022.04' == "${BOOTBRANCH:-}" || 'tag:v2022.07' == "${BOOTBRANCH:-}" ]]; then
+		display_alert "Adding package to 'host_dependencies'" "python3-setuptools" "info"
+		host_dependencies+=("python3-setuptools")
+	fi
+
 	### Python2 -- required for some older u-boot builds
 	# Debian newer than 'bookworm' and Ubuntu newer than 'lunar'/'mantic' does not carry python2 anymore; in this case some u-boot's might fail to build.
 	# Last versions to support python2 were Debian 'bullseye' and Ubuntu 'jammy'
@@ -250,7 +255,9 @@ function adaptative_prepare_host_dependencies() {
 	fi
 
 	if [[ "${wanted_arch}" == "arm64" || "${wanted_arch}" == "all" ]]; then
-		host_dependencies+=("gcc-aarch64-linux-gnu") # from crossbuild-essential-arm64
+		# gcc-aarch64-linux-gnu: from crossbuild-essential-arm64
+		# gcc-arm-linux-gnueabi: necessary for rockchip64 (and maybe other too) ATF compilation
+		host_dependencies+=("gcc-aarch64-linux-gnu" "gcc-arm-linux-gnueabi")
 	fi
 
 	if [[ "${wanted_arch}" == "armhf" || "${wanted_arch}" == "all" ]]; then
@@ -262,8 +269,13 @@ function adaptative_prepare_host_dependencies() {
 		host_dependencies+=("debian-archive-keyring")
 	fi
 
+	if [[ "${wanted_arch}" == "loong64" ]]; then
+		host_dependencies+=("gcc-loongarch64-linux-gnu") # crossbuild-essential-loongarch64 is not even available "yet"
+		host_dependencies+=("debian-ports-archive-keyring")
+	fi
+
 	if [[ "${wanted_arch}" != "amd64" ]]; then
-		host_dependencies+=(libc6-amd64-cross) # Support for running x86 binaries (under qemu on other arches)
+		host_dependencies+=("libc6-amd64-cross") # Support for running x86 binaries (under qemu on other arches)
 	fi
 
 	if [[ "${KERNEL_COMPILER}" == "clang" ]]; then
