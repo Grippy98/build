@@ -1,0 +1,1018 @@
+From 90b00c9e2e869a56c018763445e5d666a069b1ff Mon Sep 17 00:00:00 2001
+From: Andrei Aldea <7153954+Grippy98@users.noreply.github.com>
+Date: Mon, 1 Dec 2025 11:57:11 -0600
+Subject: [PATCH] SSD1680-TinyDRM
+
+---
+ .../boot/dts/ti/k3-am62l3-evm-ssd1680.dtso    |  98 ++
+ drivers/gpu/drm/tiny/Kconfig                  |  13 +
+ drivers/gpu/drm/tiny/Makefile                 |   1 +
+ drivers/gpu/drm/tiny/ssd1680.c                | 850 ++++++++++++++++++
+ 4 files changed, 962 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/ti/k3-am62l3-evm-ssd1680.dtso
+ create mode 100644 drivers/gpu/drm/tiny/ssd1680.c
+
+diff --git a/arch/arm64/boot/dts/ti/k3-am62l3-evm-ssd1680.dtso b/arch/arm64/boot/dts/ti/k3-am62l3-evm-ssd1680.dtso
+new file mode 100644
+index 000000000000..3fdf2e2f22fa
+--- /dev/null
++++ b/arch/arm64/boot/dts/ti/k3-am62l3-evm-ssd1680.dtso
+@@ -0,0 +1,98 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++/**
++ * DT Overlay for SSD1680 E-Paper Display over SPI1 on AM62L3 EVM.
++ *
++ * Pin mapping (matching k3-am62l3-evm-epaper.dtso):
++ * P5  --> BUSY
++ * P25 --> GND
++ * P26 --> RST
++ * P27 --> SPI CLK
++ * P28 --> DC
++ * P29 --> SPI DAT (MOSI)
++ * P30 --> SPI CS
++ *
++ * Copyright (C) 2025 Texas Instruments Incorporated - https://www.ti.com/
++ */
++
++/dts-v1/;
++/plugin/;
++
++#include <dt-bindings/gpio/gpio.h>
++#include "k3-pinctrl.h"
++
++&pmx0 {
++	dc_pins_default: dc-default-pins {
++		pinctrl-single,pins = <
++			AM62LX_IOPAD(0x0080, PIN_OUTPUT, 7) /* (K22) GPMC0_AD2.GPIO0_17 */
++		>;
++	};
++
++	res_pins_default: res-default-pins {
++		pinctrl-single,pins = <
++			AM62LX_IOPAD(0x007c, PIN_OUTPUT, 7) /* (L23) GPMC0_AD1.GPIO0_16 */
++		>;
++	};
++
++	busy_pins_default: busy-default-pins {
++		pinctrl-single,pins = <
++			AM62LX_IOPAD(0x00b8, PIN_INPUT, 7) /* (L21) GPMC0_AD0.GPIO0_31 */
++		>;
++	};
++
++	main_spi1_pins_default: main-spi1-default-pins {
++		pinctrl-single,pins = <
++			AM62LX_IOPAD(0x008c, PIN_OUTPUT, 4) /* (H22) GPMC0_AD5.SPI1_CLK */
++			AM62LX_IOPAD(0x0088, PIN_OUTPUT, 4) /* (K23) GPMC0_AD4.SPI1_CS0 */
++			AM62LX_IOPAD(0x0084, PIN_OUTPUT, 4) /* (J23) GPMC0_AD3.SPI1_D1 */
++		>;
++	};
++
++	fet_sel_pins_default: fet-sel-default-pins {
++		pinctrl-single,pins = <
++			AM62LX_IOPAD(0x01a8, PIN_OUTPUT, 7) /* (E13) SPI0_CLK.GPIO0_89 */
++		>;
++	};
++};
++
++&main_gpio0 {
++	fet-sel-hog {
++		/* VOUT0 FET switch selection */
++		gpio-hog;
++		gpios = <89 0>;
++		output-high;
++		line-name = "GPIO_EXP_CONN_FET_SEL";
++	};
++};
++
++&gpmc0 {
++	status = "disabled";
++};
++
++&main_spi1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&main_spi1_pins_default>, <&fet_sel_pins_default>;
++	status = "okay";
++	#address-cells = <1>;
++	#size-cells = <0>;
++
++	spidev@0 {
++		compatible = "solomon,ssd1680";
++		reg = <0>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&dc_pins_default>,
++			    <&res_pins_default>,
++			    <&busy_pins_default>;
++		spi-max-frequency = <2000000>;
++
++		/* GPIO assignments - ACTIVE_HIGH to match userspace behavior */
++		reset-gpios = <&main_gpio0 16 GPIO_ACTIVE_HIGH>;
++		dc-gpios = <&main_gpio0 17 GPIO_ACTIVE_HIGH>;
++		busy-gpios = <&main_gpio0 31 GPIO_ACTIVE_HIGH>;
++
++		/* Display properties - 4.2" e-paper display */
++		width = <400>;
++		height = <300>;
++		rotation = <0>;
++		vcom = <1500>;  /* VCOM voltage in mV (1.5V) */
++	};
++};
+diff --git a/drivers/gpu/drm/tiny/Kconfig b/drivers/gpu/drm/tiny/Kconfig
+index f6889f649bc1..531bc7055577 100644
+--- a/drivers/gpu/drm/tiny/Kconfig
++++ b/drivers/gpu/drm/tiny/Kconfig
+@@ -67,6 +67,7 @@ config DRM_OFDRM
+ config DRM_PANEL_MIPI_DBI
+ 	tristate "DRM support for MIPI DBI compatible panels"
+ 	depends on DRM && SPI
++	select DRM_CLIENT_SELECTION
+ 	select DRM_KMS_HELPER
+ 	select DRM_GEM_DMA_HELPER
+ 	select DRM_MIPI_DBI
+@@ -198,6 +199,18 @@ config TINYDRM_ST7586
+ 
+ 	  If M is selected the module will be called st7586.
+ 
++config TINYDRM_SSD1680
++	tristate "DRM support for SSD1680 display panels"
++	depends on DRM && SPI
++	select DRM_KMS_HELPER
++	select DRM_GEM_DMA_HELPER
++	select DRM_MIPI_DBI
++	select BACKLIGHT_CLASS_DEVICE
++	help
++	  DRM driver for SSD1680 e-paper display panels.
++
++	  If M is selected the module will be called ssd1680.
++
+ config TINYDRM_ST7735R
+ 	tristate "DRM support for Sitronix ST7715R/ST7735R display panels"
+ 	depends on DRM && SPI
+diff --git a/drivers/gpu/drm/tiny/Makefile b/drivers/gpu/drm/tiny/Makefile
+index 76dde89a044b..c7ae0b36007d 100644
+--- a/drivers/gpu/drm/tiny/Makefile
++++ b/drivers/gpu/drm/tiny/Makefile
+@@ -15,4 +15,5 @@ obj-$(CONFIG_TINYDRM_ILI9486)		+= ili9486.o
+ obj-$(CONFIG_TINYDRM_MI0283QT)		+= mi0283qt.o
+ obj-$(CONFIG_TINYDRM_REPAPER)		+= repaper.o
+ obj-$(CONFIG_TINYDRM_ST7586)		+= st7586.o
++obj-$(CONFIG_TINYDRM_SSD1680)		+= ssd1680.o
+ obj-$(CONFIG_TINYDRM_ST7735R)		+= st7735r.o
+diff --git a/drivers/gpu/drm/tiny/ssd1680.c b/drivers/gpu/drm/tiny/ssd1680.c
+new file mode 100644
+index 000000000000..aa9036287a91
+--- /dev/null
++++ b/drivers/gpu/drm/tiny/ssd1680.c
+@@ -0,0 +1,850 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * DRM driver for Solomon SSD1680 e-ink display controller
++ *
++ * Based on the PIXPAPER driver by LiangCheng Wang
++ *
++ * Copyright (C) 2025 Your Name
++ */
++
++#include <linux/delay.h>
++#include <linux/module.h>
++#include <linux/property.h>
++#include <linux/spi/spi.h>
++
++#include <drm/drm_atomic.h>
++#include <drm/drm_atomic_helper.h>
++#include <drm/drm_damage_helper.h>
++#include <drm/drm_drv.h>
++#include <drm/drm_fbdev_dma.h>
++#include <drm/drm_fb_dma_helper.h>
++#include <drm/drm_framebuffer.h>
++#include <drm/drm_gem_atomic_helper.h>
++#include <drm/drm_gem_dma_helper.h>
++#include <drm/drm_gem_framebuffer_helper.h>
++#include <drm/drm_probe_helper.h>
++#include <drm/drm_simple_kms_helper.h>
++
++/* SSD1680 Command definitions */
++#define SSD1680_CMD_DRIVER_OUTPUT_CONTROL		0x01
++#define SSD1680_CMD_GATE_DRIVING_VOLTAGE		0x03
++#define SSD1680_CMD_SOURCE_DRIVING_VOLTAGE		0x04
++#define SSD1680_CMD_BOOSTER_SOFT_START			0x0C
++#define SSD1680_CMD_GATE_SCAN_START			0x0F
++#define SSD1680_CMD_DEEP_SLEEP_MODE			0x10
++#define SSD1680_CMD_DATA_ENTRY_MODE			0x11
++#define SSD1680_CMD_SW_RESET				0x12
++#define SSD1680_CMD_TEMPERATURE_SENSOR_CONTROL		0x1A
++#define SSD1680_CMD_MASTER_ACTIVATION			0x20
++#define SSD1680_CMD_DISPLAY_UPDATE_CONTROL1		0x21
++#define SSD1680_CMD_DISPLAY_UPDATE_CONTROL2		0x22
++#define SSD1680_CMD_WRITE_RAM_BW			0x24
++#define SSD1680_CMD_WRITE_RAM_RED			0x26
++#define SSD1680_CMD_WRITE_VCOM_REGISTER			0x2C
++#define SSD1680_CMD_WRITE_LUT_REGISTER			0x32
++#define SSD1680_CMD_SET_DUMMY_LINE_PERIOD		0x3A
++#define SSD1680_CMD_SET_GATE_LINE_WIDTH			0x3B
++#define SSD1680_CMD_BORDER_WAVEFORM_CONTROL		0x3C
++#define SSD1680_CMD_SET_RAM_X_ADDRESS_START_END		0x44
++#define SSD1680_CMD_SET_RAM_Y_ADDRESS_START_END		0x45
++#define SSD1680_CMD_SET_RAM_X_ADDRESS_COUNTER		0x4E
++#define SSD1680_CMD_SET_RAM_Y_ADDRESS_COUNTER		0x4F
++#define SSD1680_CMD_TERMINATE_FRAME_READ_WRITE		0xFF
++
++/* Deep sleep modes */
++#define SSD1680_SLEEP_MODE_1				0x01  /* Retain RAM */
++#define SSD1680_SLEEP_MODE_2				0x03  /* No RAM retention */
++
++/* Data entry mode settings */
++#define SSD1680_DATA_ENTRY_XDEC_YDEC			0x00
++#define SSD1680_DATA_ENTRY_XINC_YDEC			0x01
++#define SSD1680_DATA_ENTRY_XDEC_YINC			0x02
++#define SSD1680_DATA_ENTRY_XINC_YINC			0x03  /* Normal mode */
++#define SSD1680_DATA_ENTRY_ADDR_UPDATE_X		0x00
++#define SSD1680_DATA_ENTRY_ADDR_UPDATE_Y		0x04
++
++/* Display update control */
++#define SSD1680_DISP_CTRL2_ENABLE_CLOCK			0x80
++#define SSD1680_DISP_CTRL2_ENABLE_ANALOG		0x40
++#define SSD1680_DISP_CTRL2_DISPLAY			0x08
++#define SSD1680_DISP_CTRL2_DISABLE_ANALOG		0x04
++#define SSD1680_DISP_CTRL2_DISABLE_CLOCK		0x01
++
++/* Default display sizes (can be overridden by DT) */
++#define SSD1680_WIDTH_DEFAULT				400
++#define SSD1680_HEIGHT_DEFAULT				300
++
++#define SSD1680_SPI_BITS_PER_WORD			8
++#define SSD1680_SPI_SPEED_DEFAULT			1000000
++
++MODULE_IMPORT_NS("DMA_BUF");
++
++struct ssd1680_error_ctx {
++	int errno_code;
++};
++
++struct ssd1680_panel {
++	struct drm_device drm;
++	struct drm_simple_display_pipe pipe;
++	struct drm_connector connector;
++
++	struct spi_device *spi;
++	struct gpio_desc *reset;
++	struct gpio_desc *busy;
++	struct gpio_desc *dc;
++
++	u32 width;
++	u32 height;
++	u32 rotation;
++	u32 vcom;  /* VCOM voltage in millivolts */
++
++	bool fast_refresh_enabled;
++	bool initialized;
++};
++
++static inline struct ssd1680_panel *to_ssd1680_panel(struct drm_device *drm)
++{
++	return container_of(drm, struct ssd1680_panel, drm);
++}
++
++/*
++ * Wait for the panel to become ready
++ * CRITICAL: BUSY pin is ACTIVE HIGH on SSD1680
++ * - BUSY=1 means display is busy
++ * - BUSY=0 means display is ready
++ */
++static void ssd1680_wait_for_panel(struct ssd1680_panel *panel)
++{
++	unsigned int timeout_ms = 10000;
++	unsigned long timeout_jiffies = jiffies + msecs_to_jiffies(timeout_ms);
++	int busy_val;
++	unsigned long start_ms = jiffies_to_msecs(jiffies);
++
++	usleep_range(1000, 1500);
++
++	busy_val = gpiod_get_value_cansleep(panel->busy);
++	drm_dbg(&panel->drm, "BUSY initial value: %d\n", busy_val);
++
++	while (gpiod_get_value_cansleep(panel->busy) == 1) {
++		if (time_after(jiffies, timeout_jiffies)) {
++			unsigned long elapsed_ms = jiffies_to_msecs(jiffies) - start_ms;
++			drm_err(&panel->drm, "Busy wait timed out after %lums (BUSY still HIGH)\n",
++				 elapsed_ms);
++			return;
++		}
++		usleep_range(100, 200);
++	}
++
++	drm_dbg(&panel->drm, "BUSY became ready after %lums\n",
++		 jiffies_to_msecs(jiffies) - start_ms);
++}
++
++static void ssd1680_spi_sync(struct spi_device *spi, struct spi_message *msg,
++			     struct ssd1680_error_ctx *err)
++{
++	int ret;
++
++	if (err->errno_code)
++		return;
++
++	ret = spi_sync(spi, msg);
++	if (ret < 0)
++		err->errno_code = ret;
++}
++
++static void ssd1680_send_cmd(struct ssd1680_panel *panel, u8 cmd,
++			     struct ssd1680_error_ctx *err)
++{
++	struct spi_transfer xfer = {
++		.tx_buf = &cmd,
++		.len = 1,
++	};
++	struct spi_message msg;
++
++	if (err->errno_code)
++		return;
++
++	spi_message_init(&msg);
++	spi_message_add_tail(&xfer, &msg);
++
++	/* DC low = command */
++	gpiod_set_value_cansleep(panel->dc, 0);
++	usleep_range(5, 5);
++	ssd1680_spi_sync(panel->spi, &msg, err);
++}
++
++static void ssd1680_send_data(struct ssd1680_panel *panel, u8 data,
++			      struct ssd1680_error_ctx *err)
++{
++	struct spi_transfer xfer = {
++		.tx_buf = &data,
++		.len = 1,
++	};
++	struct spi_message msg;
++
++	if (err->errno_code)
++		return;
++
++	spi_message_init(&msg);
++	spi_message_add_tail(&xfer, &msg);
++
++	/* DC high = data */
++	gpiod_set_value_cansleep(panel->dc, 1);
++	usleep_range(5, 5);
++	ssd1680_spi_sync(panel->spi, &msg, err);
++}
++
++/*
++ * Trigger display update
++ * mode: 0xF7 = full refresh (~2s)
++ *       0xC7 = fast refresh (~1.5s)
++ *       0xFF = partial refresh (~0.3s)
++ */
++static void ssd1680_display_update(struct ssd1680_panel *panel,
++				   u8 mode, struct ssd1680_error_ctx *err)
++{
++	int busy_before;
++
++	/* CRITICAL: Wait for panel to be ready BEFORE sending update command */
++	drm_dbg(&panel->drm, "display_update: Waiting for panel ready before update...\n");
++	ssd1680_wait_for_panel(panel);
++
++	busy_before = gpiod_get_value_cansleep(panel->busy);
++	drm_dbg(&panel->drm, "display_update: Sending update command 0x%02x (BUSY=%d)\n",
++		 mode, busy_before);
++
++	ssd1680_send_cmd(panel, SSD1680_CMD_DISPLAY_UPDATE_CONTROL2, err);
++	ssd1680_send_data(panel, mode, err);
++	ssd1680_send_cmd(panel, SSD1680_CMD_MASTER_ACTIVATION, err);
++
++	/* Small delay to let command take effect */
++	usleep_range(100, 200);
++	busy_before = gpiod_get_value_cansleep(panel->busy);
++	drm_dbg(&panel->drm, "display_update: Master activation sent (BUSY now=%d), waiting for completion...\n",
++		 busy_before);
++
++	if (!err->errno_code)
++		ssd1680_wait_for_panel(panel);
++}
++
++/*
++ * Hardware initialization sequence
++ * Based on working Waveshare EPD_4in2_V2 reference driver
++ */
++static int ssd1680_panel_hw_init(struct ssd1680_panel *panel)
++{
++	struct ssd1680_error_ctx err = { .errno_code = 0 };
++
++	/* Hardware reset sequence */
++	gpiod_set_value_cansleep(panel->reset, 1);
++	msleep(10);
++	gpiod_set_value_cansleep(panel->reset, 0);
++	msleep(10);
++	gpiod_set_value_cansleep(panel->reset, 1);
++	msleep(10);
++
++	ssd1680_wait_for_panel(panel);
++
++	/* Software reset */
++	ssd1680_send_cmd(panel, SSD1680_CMD_SW_RESET, &err);
++	if (err.errno_code)
++		goto init_fail;
++
++	ssd1680_wait_for_panel(panel);
++
++	/* Display update control 1 */
++	ssd1680_send_cmd(panel, SSD1680_CMD_DISPLAY_UPDATE_CONTROL1, &err);
++	ssd1680_send_data(panel, 0x40, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++	if (err.errno_code)
++		goto init_fail;
++
++	/* Border waveform control */
++	ssd1680_send_cmd(panel, SSD1680_CMD_BORDER_WAVEFORM_CONTROL, &err);
++	ssd1680_send_data(panel, 0x05, &err);
++	if (err.errno_code)
++		goto init_fail;
++
++	/* Data entry mode: X increment, Y increment */
++	ssd1680_send_cmd(panel, SSD1680_CMD_DATA_ENTRY_MODE, &err);
++	ssd1680_send_data(panel, 0x03, &err);
++	if (err.errno_code)
++		goto init_fail;
++
++	/* Set display window */
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_X_ADDRESS_START_END, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++	ssd1680_send_data(panel, (panel->width / 8) - 1, &err);
++	if (err.errno_code)
++		goto init_fail;
++
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_Y_ADDRESS_START_END, &err);
++	ssd1680_send_data(panel, 0x00, &err);  /* Y start low */
++	ssd1680_send_data(panel, 0x00, &err);  /* Y start high */
++	ssd1680_send_data(panel, (panel->height - 1) & 0xFF, &err);  /* Y end low */
++	ssd1680_send_data(panel, ((panel->height - 1) >> 8) & 0xFF, &err);  /* Y end high */
++	if (err.errno_code)
++		goto init_fail;
++
++	/* Set initial cursor position */
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_X_ADDRESS_COUNTER, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++	if (err.errno_code)
++		goto init_fail;
++
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_Y_ADDRESS_COUNTER, &err);
++	ssd1680_send_data(panel, 0x00, &err);  /* Y counter low */
++	ssd1680_send_data(panel, 0x00, &err);  /* Y counter high */
++	if (err.errno_code)
++		goto init_fail;
++
++	ssd1680_wait_for_panel(panel);
++	return 0;
++
++init_fail:
++	drm_err(&panel->drm, "Hardware initialization failed: %d\n",
++		err.errno_code);
++	return err.errno_code;
++}
++
++/*
++ * Fast refresh initialization sequence
++ * Based on Good Display GDEY042T81 EPD_HW_Init_Fast()
++ * Configures display for faster refresh times by:
++ * 1. Setting temperature register for faster waveform (1.5s)
++ * 2. Loading temperature value with special sequence
++ * This enables 0xFF partial refresh mode (~300ms updates)
++ */
++static int ssd1680_panel_hw_init_fast(struct ssd1680_panel *panel)
++{
++	struct ssd1680_error_ctx err = { .errno_code = 0 };
++
++	/* Hardware reset */
++	gpiod_set_value_cansleep(panel->reset, 0);
++	msleep(10);
++	gpiod_set_value_cansleep(panel->reset, 1);
++	msleep(10);
++
++	/* Software reset */
++	ssd1680_send_cmd(panel, SSD1680_CMD_SW_RESET, &err);
++	ssd1680_wait_for_panel(panel);
++
++	/* Display update control 1 */
++	ssd1680_send_cmd(panel, SSD1680_CMD_DISPLAY_UPDATE_CONTROL1, &err);
++	ssd1680_send_data(panel, 0x40, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++
++	/* Border waveform control */
++	ssd1680_send_cmd(panel, SSD1680_CMD_BORDER_WAVEFORM_CONTROL, &err);
++	ssd1680_send_data(panel, 0x05, &err);
++
++	/* CRITICAL: Temperature register for 1.5s fast refresh
++	 * 0x6E = 1.5 second refresh time
++	 * 0x5A = 1.0 second refresh time (faster but may have ghosting)
++	 */
++	ssd1680_send_cmd(panel, SSD1680_CMD_TEMPERATURE_SENSOR_CONTROL, &err);
++	ssd1680_send_data(panel, 0x6E, &err);  /* 1.5s refresh */
++
++	/* Load temperature value - special sequence for fast refresh */
++	ssd1680_send_cmd(panel, SSD1680_CMD_DISPLAY_UPDATE_CONTROL2, &err);
++	ssd1680_send_data(panel, 0x91, &err);
++	ssd1680_send_cmd(panel, SSD1680_CMD_MASTER_ACTIVATION, &err);
++	ssd1680_wait_for_panel(panel);
++
++	/* Data entry mode */
++	ssd1680_send_cmd(panel, SSD1680_CMD_DATA_ENTRY_MODE, &err);
++	ssd1680_send_data(panel, 0x03, &err);
++
++	/* Set display window */
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_X_ADDRESS_START_END, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++	ssd1680_send_data(panel, (panel->width / 8) - 1, &err);
++
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_Y_ADDRESS_START_END, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++	ssd1680_send_data(panel, (panel->height - 1) & 0xFF, &err);
++	ssd1680_send_data(panel, ((panel->height - 1) >> 8) & 0xFF, &err);
++
++	/* Set initial cursor position */
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_X_ADDRESS_COUNTER, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_Y_ADDRESS_COUNTER, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++
++	ssd1680_wait_for_panel(panel);
++
++	if (err.errno_code) {
++		drm_err(&panel->drm, "Fast refresh initialization failed: %d\n",
++			err.errno_code);
++		return err.errno_code;
++	}
++
++	panel->fast_refresh_enabled = true;
++	return 0;
++}
++
++/*
++ * Clear display to white
++ */
++static void ssd1680_clear_display(struct ssd1680_panel *panel)
++{
++	struct ssd1680_error_ctx err = { .errno_code = 0 };
++	unsigned int i;
++	unsigned int data_size = (panel->width * panel->height) / 8;
++
++	/* Reset RAM address counters to start position */
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_X_ADDRESS_COUNTER, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_Y_ADDRESS_COUNTER, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++
++	/* Write white to current frame RAM */
++	ssd1680_send_cmd(panel, SSD1680_CMD_WRITE_RAM_BW, &err);
++	for (i = 0; i < data_size; i++)
++		ssd1680_send_data(panel, 0xFF, &err);
++
++	/* Write white to old frame RAM (required for proper refresh) */
++	ssd1680_send_cmd(panel, SSD1680_CMD_WRITE_RAM_RED, &err);
++	for (i = 0; i < data_size; i++)
++		ssd1680_send_data(panel, 0xFF, &err);
++
++	/* Trigger full refresh */
++	ssd1680_display_update(panel, 0xF7, &err);
++
++	if (err.errno_code)
++		drm_err(&panel->drm, "Clear display failed: %d\n", err.errno_code);
++}
++
++/*
++ * Prepare for partial refresh
++ * Based on Good Display GDEY042T81 EPD_Dis_Part()
++ * Must be called before using 0xFF partial refresh mode
++ */
++static void ssd1680_prepare_partial_refresh(struct ssd1680_panel *panel)
++{
++	struct ssd1680_error_ctx err = { .errno_code = 0 };
++
++	/* Set border waveform for partial refresh */
++	ssd1680_send_cmd(panel, SSD1680_CMD_BORDER_WAVEFORM_CONTROL, &err);
++	ssd1680_send_data(panel, 0x80, &err);
++
++	/* Display update control 1 - CRITICAL for partial refresh
++	 * Must be 0x00, 0x00 (not 0x40, 0x00 like full refresh)
++	 */
++	ssd1680_send_cmd(panel, SSD1680_CMD_DISPLAY_UPDATE_CONTROL1, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++}
++
++/*
++ * Convert XRGB8888 framebuffer to 1-bit monochrome
++ * Uses luminance threshold: (0.299*R + 0.587*G + 0.114*B) > 127
++ */
++static void ssd1680_convert_fb_to_1bpp(u8 *dst, struct iosys_map *src,
++				       struct drm_framebuffer *fb,
++				       struct drm_rect *rect)
++{
++	unsigned int x, y;
++	u32 *src_line;
++	u8 byte = 0;
++	unsigned int bit_pos = 0;
++	unsigned int dst_idx = 0;
++
++	for (y = rect->y1; y < rect->y2; y++) {
++		src_line = (u32 *)(src->vaddr + y * fb->pitches[0]);
++
++		for (x = rect->x1; x < rect->x2; x++) {
++			u32 pixel = src_line[x];
++			u8 r = (pixel >> 16) & 0xFF;
++			u8 g = (pixel >> 8) & 0xFF;
++			u8 b = pixel & 0xFF;
++
++			/* Calculate luminance using standard coefficients */
++			unsigned int luma = (299 * r + 587 * g + 114 * b) / 1000;
++
++			/* Threshold: >127 = white (1), <=127 = black (0) */
++			if (luma > 127)
++				byte |= (1 << (7 - bit_pos));
++
++			bit_pos++;
++			if (bit_pos == 8) {
++				dst[dst_idx++] = byte;
++				byte = 0;
++				bit_pos = 0;
++			}
++		}
++
++		/* Handle partial byte at end of line */
++		if (bit_pos > 0) {
++			dst[dst_idx++] = byte;
++			byte = 0;
++			bit_pos = 0;
++		}
++	}
++}
++
++/*
++ * Pipe update - framebuffer to display
++ */
++static void ssd1680_pipe_update(struct drm_simple_display_pipe *pipe,
++				struct drm_plane_state *old_state)
++{
++	struct drm_plane_state *plane_state = pipe->plane.state;
++	struct ssd1680_panel *panel = to_ssd1680_panel(pipe->crtc.dev);
++	struct drm_framebuffer *fb = plane_state->fb;
++	struct drm_gem_object *gem;
++	struct drm_gem_dma_object *dma_obj;
++	struct iosys_map map;
++	struct ssd1680_error_ctx err = { .errno_code = 0 };
++	unsigned int data_size = (panel->width * panel->height) / 8;
++	u8 *mono_buffer;
++	struct drm_rect rect;
++	unsigned int i;
++
++	if (!panel->initialized)
++		return;
++
++	if (!pipe->crtc.state->active)
++		return;
++
++	if (!fb)
++		return;
++
++	/* Check for damage - this is critical for fbdev updates */
++	if (!drm_atomic_helper_damage_merged(old_state, plane_state, &rect))
++		return;
++
++	/* Ignore very small updates (e.g., cursor blink) - not worth refreshing e-ink for this
++	 * Threshold: 100 pixels (roughly 10x10). Cursor is typically 8x8 = 64 pixels.
++	 */
++	{
++		unsigned int damage_pixels = (rect.x2 - rect.x1) * (rect.y2 - rect.y1);
++
++		if (damage_pixels < 100)
++			return;
++	}
++
++	gem = drm_gem_fb_get_obj(fb, 0);
++	dma_obj = to_drm_gem_dma_obj(gem);
++	iosys_map_set_vaddr(&map, dma_obj->vaddr);
++
++	/* Allocate temporary buffer for 1-bit conversion */
++	mono_buffer = kzalloc(data_size, GFP_KERNEL);
++	if (!mono_buffer) {
++		drm_err(&panel->drm, "Failed to allocate conversion buffer\n");
++		return;
++	}
++
++	/* For now, always update entire display (e-ink can't do partial efficiently) */
++	rect.x1 = 0;
++	rect.y1 = 0;
++	rect.x2 = panel->width;
++	rect.y2 = panel->height;
++
++	drm_dbg(&panel->drm, "  Converting %dx%d framebuffer to 1bpp\n",
++		 panel->width, panel->height);
++	ssd1680_convert_fb_to_1bpp(mono_buffer, &map, fb, &rect);
++
++	/* Reset RAM address counters to start position */
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_X_ADDRESS_COUNTER, &err);
++	ssd1680_send_data(panel, 0x00, &err);
++
++	ssd1680_send_cmd(panel, SSD1680_CMD_SET_RAM_Y_ADDRESS_COUNTER, &err);
++	ssd1680_send_data(panel, 0x00, &err);  /* Y counter low */
++	ssd1680_send_data(panel, 0x00, &err);  /* Y counter high */
++
++	/* Write to current frame RAM (BW) */
++	ssd1680_send_cmd(panel, SSD1680_CMD_WRITE_RAM_BW, &err);
++	for (i = 0; i < data_size; i++)
++		ssd1680_send_data(panel, mono_buffer[i], &err);
++
++	/* Trigger display update
++	 * If fast refresh is enabled, use 0xFF partial refresh (~300ms)
++	 * Otherwise fall back to 0xC7 fast refresh (~1.5s)
++	 */
++	if (panel->fast_refresh_enabled) {
++		/* For partial refresh: only write to BW RAM (new frame)
++		 * RED RAM keeps old frame - controller compares them to find changes
++		 */
++		ssd1680_prepare_partial_refresh(panel);
++		ssd1680_display_update(panel, 0xFF, &err);
++	} else {
++		/* For full/fast refresh: write same data to RED RAM (old frame)
++		 * This ensures proper waveform generation
++		 */
++		ssd1680_send_cmd(panel, SSD1680_CMD_WRITE_RAM_RED, &err);
++		for (i = 0; i < data_size; i++)
++			ssd1680_send_data(panel, mono_buffer[i], &err);
++		ssd1680_display_update(panel, 0xC7, &err);
++	}
++
++	if (err.errno_code)
++		drm_err(&panel->drm, "Display update failed: %d\n", err.errno_code);
++
++	kfree(mono_buffer);
++}
++
++static void ssd1680_pipe_enable(struct drm_simple_display_pipe *pipe,
++				struct drm_crtc_state *crtc_state,
++				struct drm_plane_state *plane_state)
++{
++	struct ssd1680_panel *panel = to_ssd1680_panel(pipe->crtc.dev);
++
++	/* Do fast refresh initialization first for faster subsequent updates */
++	if (ssd1680_panel_hw_init_fast(panel)) {
++		drm_warn(&panel->drm, "Fast refresh init failed, using standard mode\n");
++		panel->fast_refresh_enabled = false;
++	}
++
++	/* Initial clear with full refresh (0xF7) for best quality
++	 * Subsequent updates will use partial refresh (0xFF) if enabled
++	 */
++	ssd1680_clear_display(panel);
++	panel->initialized = true;
++}
++
++static void ssd1680_pipe_disable(struct drm_simple_display_pipe *pipe)
++{
++	struct ssd1680_panel *panel = to_ssd1680_panel(pipe->crtc.dev);
++	struct ssd1680_error_ctx err = { .errno_code = 0 };
++
++	/* Mark as uninitialized - pipe_enable will reinitialize on next enable */
++	panel->initialized = false;
++
++	/* Enter deep sleep */
++	ssd1680_send_cmd(panel, SSD1680_CMD_DEEP_SLEEP_MODE, &err);
++	ssd1680_send_data(panel, SSD1680_SLEEP_MODE_1, &err);
++}
++
++static const struct drm_simple_display_pipe_funcs ssd1680_pipe_funcs = {
++	.enable = ssd1680_pipe_enable,
++	.disable = ssd1680_pipe_disable,
++	.update = ssd1680_pipe_update,
++};
++
++static const struct drm_display_mode ssd1680_mode = {
++	.clock = 1000,  /* Dummy clock */
++	.hdisplay = SSD1680_WIDTH_DEFAULT,
++	.hsync_start = SSD1680_WIDTH_DEFAULT,
++	.hsync_end = SSD1680_WIDTH_DEFAULT,
++	.htotal = SSD1680_WIDTH_DEFAULT,
++	.vdisplay = SSD1680_HEIGHT_DEFAULT,
++	.vsync_start = SSD1680_HEIGHT_DEFAULT,
++	.vsync_end = SSD1680_HEIGHT_DEFAULT,
++	.vtotal = SSD1680_HEIGHT_DEFAULT,
++	.type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED,
++};
++
++static int ssd1680_connector_get_modes(struct drm_connector *connector)
++{
++	return drm_connector_helper_get_modes_fixed(connector, &ssd1680_mode);
++}
++
++static const struct drm_connector_helper_funcs ssd1680_connector_helper_funcs = {
++	.get_modes = ssd1680_connector_get_modes,
++};
++
++static const struct drm_connector_funcs ssd1680_connector_funcs = {
++	.reset = drm_atomic_helper_connector_reset,
++	.fill_modes = drm_helper_probe_single_connector_modes,
++	.destroy = drm_connector_cleanup,
++	.atomic_duplicate_state = drm_atomic_helper_connector_duplicate_state,
++	.atomic_destroy_state = drm_atomic_helper_connector_destroy_state,
++};
++
++static const uint32_t ssd1680_formats[] = {
++	DRM_FORMAT_XRGB8888,
++};
++
++DEFINE_DRM_GEM_FOPS(ssd1680_fops);
++
++static struct drm_driver ssd1680_drm_driver = {
++	.driver_features = DRIVER_GEM | DRIVER_MODESET | DRIVER_ATOMIC,
++	.fops = &ssd1680_fops,
++	.name = "ssd1680",
++	.desc = "DRM driver for SSD1680 e-ink controller",
++	.major = 1,
++	.minor = 0,
++	DRM_GEM_DMA_DRIVER_OPS,
++	DRM_FBDEV_DMA_DRIVER_OPS,
++};
++
++static const struct drm_mode_config_funcs ssd1680_mode_config_funcs = {
++	.fb_create = drm_gem_fb_create_with_dirty,
++	.atomic_check = drm_atomic_helper_check,
++	.atomic_commit = drm_atomic_helper_commit,
++};
++
++static int ssd1680_probe(struct spi_device *spi)
++{
++	struct device *dev = &spi->dev;
++	struct ssd1680_panel *panel;
++	struct drm_device *drm;
++	int ret;
++
++	/* The SPI device is used to allocate DMA memory for fbdev */
++	if (!dev->coherent_dma_mask) {
++		ret = dma_coerce_mask_and_coherent(dev, DMA_BIT_MASK(32));
++		if (ret) {
++			dev_warn(dev, "Failed to set DMA mask: %d\n", ret);
++			return ret;
++		}
++	}
++
++	panel = devm_drm_dev_alloc(dev, &ssd1680_drm_driver,
++				   struct ssd1680_panel, drm);
++	if (IS_ERR(panel))
++		return PTR_ERR(panel);
++
++	drm = &panel->drm;
++	panel->spi = spi;
++	spi_set_drvdata(spi, panel);
++
++	panel->fast_refresh_enabled = false;
++	panel->initialized = false;
++	/* Configure SPI - standard MSB-first mode */
++	spi->mode = SPI_MODE_0;
++	spi->bits_per_word = SSD1680_SPI_BITS_PER_WORD;
++
++	if (!spi->max_speed_hz) {
++		drm_warn(drm, "spi-max-frequency not specified, using %u Hz\n",
++			 SSD1680_SPI_SPEED_DEFAULT);
++		spi->max_speed_hz = SSD1680_SPI_SPEED_DEFAULT;
++	}
++
++	ret = spi_setup(spi);
++	if (ret < 0) {
++		drm_err(drm, "SPI setup failed: %d\n", ret);
++		return ret;
++	}
++
++	/* Get display properties from DT */
++	device_property_read_u32(dev, "width", &panel->width);
++	if (!panel->width)
++		panel->width = SSD1680_WIDTH_DEFAULT;
++
++	device_property_read_u32(dev, "height", &panel->height);
++	if (!panel->height)
++		panel->height = SSD1680_HEIGHT_DEFAULT;
++
++	device_property_read_u32(dev, "rotation", &panel->rotation);
++	device_property_read_u32(dev, "vcom", &panel->vcom);
++	if (!panel->vcom)
++		panel->vcom = 1500;  /* Default 1.5V */
++
++	/* Get GPIOs - reset starts HIGH (inactive), DC starts LOW */
++	panel->reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
++	if (IS_ERR(panel->reset)) {
++		drm_err(drm, "Failed to get RESET GPIO: %ld\n", PTR_ERR(panel->reset));
++		return PTR_ERR(panel->reset);
++	}
++	gpiod_direction_output(panel->reset, 1);
++
++	panel->busy = devm_gpiod_get(dev, "busy", GPIOD_IN);
++	if (IS_ERR(panel->busy)) {
++		drm_err(drm, "Failed to get BUSY GPIO: %ld\n", PTR_ERR(panel->busy));
++		return PTR_ERR(panel->busy);
++	}
++	gpiod_direction_input(panel->busy);
++
++	panel->dc = devm_gpiod_get(dev, "dc", GPIOD_OUT_LOW);
++	if (IS_ERR(panel->dc)) {
++		drm_err(drm, "Failed to get DC GPIO: %ld\n", PTR_ERR(panel->dc));
++		return PTR_ERR(panel->dc);
++	}
++	gpiod_direction_output(panel->dc, 0);
++
++	/* Hardware initialization moved to pipe_enable() - uses fast init with temp register */
++
++	/* Setup DRM mode config */
++	ret = drmm_mode_config_init(drm);
++	if (ret)
++		return ret;
++
++	drm->mode_config.funcs = &ssd1680_mode_config_funcs;
++	drm->mode_config.min_width = panel->width;
++	drm->mode_config.max_width = panel->width;
++	drm->mode_config.min_height = panel->height;
++	drm->mode_config.max_height = panel->height;
++
++	/* Initialize connector */
++	drm_connector_helper_add(&panel->connector, &ssd1680_connector_helper_funcs);
++	ret = drm_connector_init(drm, &panel->connector,
++				 &ssd1680_connector_funcs,
++				 DRM_MODE_CONNECTOR_SPI);
++	if (ret)
++		return ret;
++
++	/* Initialize simple display pipe (combines plane, CRTC, and encoder) */
++	ret = drm_simple_display_pipe_init(drm, &panel->pipe, &ssd1680_pipe_funcs,
++					   ssd1680_formats, ARRAY_SIZE(ssd1680_formats),
++					   NULL, &panel->connector);
++	if (ret)
++		return ret;
++
++	drm_mode_config_reset(drm);
++
++	/* Register DRM device */
++	ret = drm_dev_register(drm, 0);
++	if (ret)
++		return ret;
++
++	drm_fbdev_dma_setup(drm, 0);
++
++	drm_info(drm, "SSD1680 e-ink display initialized (%dx%d, %s refresh)\n",
++		 panel->width, panel->height,
++		 panel->fast_refresh_enabled ? "partial (0xFF)" : "fast (0xC7)");
++
++	return 0;
++}
++
++static void ssd1680_remove(struct spi_device *spi)
++{
++	struct ssd1680_panel *panel = spi_get_drvdata(spi);
++	struct drm_device *drm = &panel->drm;
++
++	drm_dev_unplug(drm);
++	drm_atomic_helper_shutdown(drm);
++}
++
++static void ssd1680_shutdown(struct spi_device *spi)
++{
++	struct ssd1680_panel *panel = spi_get_drvdata(spi);
++
++	drm_atomic_helper_shutdown(&panel->drm);
++}
++
++static const struct of_device_id ssd1680_of_match[] = {
++	{ .compatible = "solomon,ssd1680" },
++	{ .compatible = "solomon,ssd1681" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, ssd1680_of_match);
++
++static const struct spi_device_id ssd1680_id[] = {
++	{ "ssd1680", 0 },
++	{ "ssd1681", 0 },
++	{ }
++};
++MODULE_DEVICE_TABLE(spi, ssd1680_id);
++
++static struct spi_driver ssd1680_spi_driver = {
++	.driver = {
++		.name = "ssd1680",
++		.of_match_table = ssd1680_of_match,
++	},
++	.probe = ssd1680_probe,
++	.remove = ssd1680_remove,
++	.shutdown = ssd1680_shutdown,
++	.id_table = ssd1680_id,
++};
++module_spi_driver(ssd1680_spi_driver);
++
++MODULE_AUTHOR("Devarsh Thakkar <devarsht@ti.com>");
++MODULE_DESCRIPTION("DRM driver for Solomon SSD1680 e-ink display controller");
++MODULE_LICENSE("GPL");
+-- 
+2.49.0
+
