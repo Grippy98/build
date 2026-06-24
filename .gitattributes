@@ -1,5 +1,8 @@
 .gitattributes text eol=lf
+config/boards/beagley-ai.conf text eol=lf
 config/boards/pocketbeagle2.conf text eol=lf
+config/kernel/linux-k3-beagle-vendor.config text eol=lf
 config/sources/families/k3-beagle.conf text eol=lf
 config/sources/families/include/usb_gadget_ncm_acm.inc text eol=lf
 packages/bsp/usb-gadget-ncm-acm/* text eol=lf
+patch/kernel/archive/k3-beagle-6.12/* text eol=lf -whitespace

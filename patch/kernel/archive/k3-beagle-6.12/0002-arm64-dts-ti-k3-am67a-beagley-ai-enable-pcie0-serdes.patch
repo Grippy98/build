@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Andrei Aldea <andrei@ti.com>
+Date: Wed, 24 Jun 2026 21:20:00 +0000
+Subject: [PATCH] arm64: dts: ti: k3-am67a-beagley-ai: enable PCIe0 SERDES
+
+BeagleY-AI already describes the PCIe0 root port, lane mux, reset GPIO,
+PCIe power-enable pin, and SERDES1 PCIe lane. Enable the SERDES wrapper
+and PHY so the PCIe root port can train a link to attached NVMe devices.
+---
+ arch/arm64/boot/dts/ti/k3-am67a-beagley-ai.dts | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/ti/k3-am67a-beagley-ai.dts b/arch/arm64/boot/dts/ti/k3-am67a-beagley-ai.dts
+index ee3a953d38ef..c50ca32e8f93 100644
+--- a/arch/arm64/boot/dts/ti/k3-am67a-beagley-ai.dts
++++ b/arch/arm64/boot/dts/ti/k3-am67a-beagley-ai.dts
+@@ -977,7 +977,12 @@ &serdes0 {
+ 	};
+ };
+ 
++&serdes_wiz1 {
++	status = "okay";
++};
++
+ &serdes1 {
++	status = "okay";
+ 	serdes1_pcie_link: phy@0 {
+ 		reg = <0>;
+ 		cdns,num-lanes = <1>;
+-- 
+2.39.5
