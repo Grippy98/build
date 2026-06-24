@@ -1,3 +1,5 @@
 .gitattributes text eol=lf
 config/boards/pocketbeagle2.conf text eol=lf
-packages/bsp/pocketbeagle2-usb-gadget/* text eol=lf
+config/sources/families/k3-beagle.conf text eol=lf
+config/sources/families/include/usb_gadget_ncm_acm.inc text eol=lf
+packages/bsp/usb-gadget-ncm-acm/* text eol=lf

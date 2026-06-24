@@ -1,11 +1,32 @@
 #!/bin/sh
 set -eu
 
-G=/sys/kernel/config/usb_gadget/pb2
-CONFIG=c.1
-IDENTITY_DIR=/var/lib/pb2-usb-gadget
+DEFAULTS=/etc/default/usb-gadget-ncm-acm
+[ ! -r "$DEFAULTS" ] || . "$DEFAULTS"
+
+GADGET_NAME=${USB_GADGET_NCM_ACM_NAME:-ncm-acm}
+G=/sys/kernel/config/usb_gadget/$GADGET_NAME
+CONFIG=${USB_GADGET_NCM_ACM_CONFIG:-c.1}
+IDENTITY_DIR=${USB_GADGET_NCM_ACM_IDENTITY_DIR:-/var/lib/usb-gadget-ncm-acm/$GADGET_NAME}
 IDENTITY_FILE=$IDENTITY_DIR/identity
-FALLBACK_SERIAL=PB2NCMACM0001
+FALLBACK_SERIAL=${USB_GADGET_NCM_ACM_FALLBACK_SERIAL:-NCMACM0001}
+SERIAL_PREFIX=${USB_GADGET_NCM_ACM_SERIAL_PREFIX:-NCMACM}
+ID_VENDOR=${USB_GADGET_NCM_ACM_ID_VENDOR:-0x1d6b}
+ID_PRODUCT=${USB_GADGET_NCM_ACM_ID_PRODUCT:-0x0105}
+BCD_USB=${USB_GADGET_NCM_ACM_BCD_USB:-0x0200}
+BCD_DEVICE=${USB_GADGET_NCM_ACM_BCD_DEVICE:-0x0100}
+DEVICE_CLASS=${USB_GADGET_NCM_ACM_DEVICE_CLASS:-0xEF}
+DEVICE_SUBCLASS=${USB_GADGET_NCM_ACM_DEVICE_SUBCLASS:-0x02}
+DEVICE_PROTOCOL=${USB_GADGET_NCM_ACM_DEVICE_PROTOCOL:-0x01}
+MANUFACTURER=${USB_GADGET_NCM_ACM_MANUFACTURER:-Linux}
+PRODUCT=${USB_GADGET_NCM_ACM_PRODUCT:-USB NCM+ACM}
+CONFIGURATION=${USB_GADGET_NCM_ACM_CONFIGURATION:-NCM network + serial}
+MAX_POWER=${USB_GADGET_NCM_ACM_MAX_POWER:-250}
+NETWORK_INTERFACE=${USB_GADGET_NCM_ACM_INTERFACE:-usb0}
+DEV_MAC_PREFIX=${USB_GADGET_NCM_ACM_DEV_MAC_PREFIX:-02}
+HOST_MAC_PREFIX=${USB_GADGET_NCM_ACM_HOST_MAC_PREFIX:-06}
+DEV_MAC_LABEL=${USB_GADGET_NCM_ACM_DEV_MAC_LABEL:-$GADGET_NAME-dev}
+HOST_MAC_LABEL=${USB_GADGET_NCM_ACM_HOST_MAC_LABEL:-$GADGET_NAME-host}
 
 read_dt_serial() {
 	if [ -r /proc/device-tree/serial-number ]; then
@@ -41,7 +62,7 @@ usb_serial() {
 		return 0
 	fi
 
-	printf 'PB2NCMACM-%s\n' "$(persistent_identity)"
+	printf '%s-%s\n' "$SERIAL_PREFIX" "$(persistent_identity)"
 }
 
 derive_mac() {
@@ -81,7 +102,7 @@ cleanup_configfs() {
 case "${1:-start}" in
 	stop)
 		[ ! -d "$G" ] || echo "" > "$G/UDC" 2>/dev/null || true
-		ip link set usb0 down 2>/dev/null || true
+		ip link set "$NETWORK_INTERFACE" down 2>/dev/null || true
 		cleanup_configfs
 		exit 0
 		;;
@@ -112,29 +133,29 @@ if [ -z "$UDC" ]; then
 	exit 1
 fi
 USB_SERIAL=$(usb_serial)
-DEV_MAC=$(derive_mac 02 pb2-dev)
-HOST_MAC=$(derive_mac 06 pb2-host)
+DEV_MAC=$(derive_mac "$DEV_MAC_PREFIX" "$DEV_MAC_LABEL")
+HOST_MAC=$(derive_mac "$HOST_MAC_PREFIX" "$HOST_MAC_LABEL")
 
 mkdir -p "$G"
 cd "$G"
 
-printf '0x1d6b\n' > idVendor
-printf '0x0105\n' > idProduct
-printf '0x0200\n' > bcdUSB
-printf '0x0100\n' > bcdDevice
-printf '0xEF\n' > bDeviceClass
-printf '0x02\n' > bDeviceSubClass
-printf '0x01\n' > bDeviceProtocol
+printf '%s\n' "$ID_VENDOR" > idVendor
+printf '%s\n' "$ID_PRODUCT" > idProduct
+printf '%s\n' "$BCD_USB" > bcdUSB
+printf '%s\n' "$BCD_DEVICE" > bcdDevice
+printf '%s\n' "$DEVICE_CLASS" > bDeviceClass
+printf '%s\n' "$DEVICE_SUBCLASS" > bDeviceSubClass
+printf '%s\n' "$DEVICE_PROTOCOL" > bDeviceProtocol
 
 mkdir -p strings/0x409
 printf '%s\n' "$USB_SERIAL" > strings/0x409/serialnumber
-printf 'BeagleBoard.org\n' > strings/0x409/manufacturer
-printf 'PocketBeagle 2 NCM+ACM\n' > strings/0x409/product
+printf '%s\n' "$MANUFACTURER" > strings/0x409/manufacturer
+printf '%s\n' "$PRODUCT" > strings/0x409/product
 
 mkdir -p configs/$CONFIG/strings/0x409
 printf '0x80\n' > configs/$CONFIG/bmAttributes
-printf '250\n' > configs/$CONFIG/MaxPower
-printf 'NCM network + serial\n' > configs/$CONFIG/strings/0x409/configuration
+printf '%s\n' "$MAX_POWER" > configs/$CONFIG/MaxPower
+printf '%s\n' "$CONFIGURATION" > configs/$CONFIG/strings/0x409/configuration
 
 mkdir -p functions/ncm.usb0
 printf '%s\n' "$DEV_MAC" > functions/ncm.usb0/dev_addr
@@ -144,4 +165,4 @@ mkdir -p functions/acm.usb0
 ln -s functions/ncm.usb0 configs/$CONFIG/ncm.usb0
 ln -s functions/acm.usb0 configs/$CONFIG/acm.usb0
 printf '%s\n' "$UDC" > UDC
-ip link set usb0 up 2>/dev/null || true
+ip link set "$NETWORK_INTERFACE" up 2>/dev/null || true

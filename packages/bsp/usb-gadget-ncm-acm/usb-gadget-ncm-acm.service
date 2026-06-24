@@ -1,5 +1,5 @@
 [Unit]
-Description=PocketBeagle 2 USB NCM ethernet plus ACM serial gadget
+Description=USB NCM ethernet plus ACM serial gadget
 After=sys-kernel-config.mount systemd-modules-load.service
 Wants=sys-kernel-config.mount
 Before=network-pre.target NetworkManager.service systemd-networkd.service serial-getty@ttyGS0.service
@@ -7,8 +7,8 @@ Before=network-pre.target NetworkManager.service systemd-networkd.service serial
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/local/sbin/pb2-usb-gadget-ncm-acm start
-ExecStop=/usr/local/sbin/pb2-usb-gadget-ncm-acm stop
+ExecStart=/usr/local/sbin/usb-gadget-ncm-acm start
+ExecStop=/usr/local/sbin/usb-gadget-ncm-acm stop
 
 [Install]
 WantedBy=multi-user.target
