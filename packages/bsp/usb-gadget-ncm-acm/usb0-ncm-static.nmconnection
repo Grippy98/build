@@ -1,5 +1,5 @@
 [connection]
-id=pb2-usb0-static
+id=usb0-ncm-static
 type=ethernet
 interface-name=usb0
 autoconnect=true
