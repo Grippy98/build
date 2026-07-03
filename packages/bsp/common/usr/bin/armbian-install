@@ -219,7 +219,7 @@ create_armbian()
 	echo "SD UUID:   $sduuid" >> $logfile
 	echo "SATA UUID: $satauuid" >> $logfile
 	echo "eMMC UUID: $emmcuuid $eMMCFilesystemChoosen" >> $logfile
-	echo "Boot: \$1 $1 $eMMCFilesystemChoosen" >> $logfile
+	echo "Boot: \$1 $1 ${eMMCBootFilesystemChoosen:-$eMMCFilesystemChoosen}" >> $logfile
 	echo "Root: \$2 $2 $FilesystemChoosen" >> $logfile
 
 	# calculate usage and see if it fits on destination
@@ -400,49 +400,70 @@ create_armbian()
 			echo "Finishing full install to eMMC." >> $logfile
 		fi
 
+		local emmc_boot_dir="${TempDir}/bootfs/boot"
+		local emmc_boot_direct_mount=no
+		if [[ -n $BOOTFS_TYPE ]]; then
+			emmc_boot_dir="${TempDir}/bootfs"
+			emmc_boot_direct_mount=yes
+		fi
+
 		# fix that we can have one exlude file
-		cp -R /boot "${TempDir}"/bootfs
-		# old boot scripts
-		[[ -f "${TempDir}"/bootfs/boot/boot.cmd ]] && sed -e 's,root='"$root_uuid"',root='"$targetuuid"',g' -i "${TempDir}"/bootfs/boot/boot.cmd
-		# new boot scripts
-		if [[ -f "${TempDir}"/bootfs/boot/armbianEnv.txt ]]; then
-			sed -e 's,rootdev=.*,rootdev='"$targetuuid"',g' -i "${TempDir}"/bootfs/boot/armbianEnv.txt
-			grep -q '^rootdev' "${TempDir}"/bootfs/boot/armbianEnv.txt || echo "rootdev=$targetuuid" >> "${TempDir}"/bootfs/boot/armbianEnv.txt
+		if [[ $emmc_boot_direct_mount == yes ]]; then
+			cp -a /boot/. "$emmc_boot_dir"/
 		else
-			[[ -f "${TempDir}"/bootfs/boot/boot.cmd ]] && sed -e 's,setenv rootdev.*,setenv rootdev '"$targetuuid"',g' -i "${TempDir}"/bootfs/boot/boot.cmd
-			[[ -f "${TempDir}"/bootfs/boot/boot.ini ]] && sed -e 's,^setenv rootdev.*$,setenv rootdev "'"$targetuuid"'",' -i "${TempDir}"/bootfs/boot/boot.ini
+			cp -R /boot "${TempDir}"/bootfs
+		fi
+		# old boot scripts
+		[[ -f "$emmc_boot_dir/boot.cmd" ]] && sed -e 's,root='"$root_uuid"',root='"$targetuuid"',g' -i "$emmc_boot_dir/boot.cmd"
+		# new boot scripts
+		if [[ -f "$emmc_boot_dir/armbianEnv.txt" ]]; then
+			sed -e 's,rootdev=.*,rootdev='"$targetuuid"',g' -i "$emmc_boot_dir/armbianEnv.txt"
+			grep -q '^rootdev' "$emmc_boot_dir/armbianEnv.txt" || echo "rootdev=$targetuuid" >> "$emmc_boot_dir/armbianEnv.txt"
+		else
+			[[ -f "$emmc_boot_dir/boot.cmd" ]] && sed -e 's,setenv rootdev.*,setenv rootdev '"$targetuuid"',g' -i "$emmc_boot_dir/boot.cmd"
+			[[ -f "$emmc_boot_dir/boot.ini" ]] && sed -e 's,^setenv rootdev.*$,setenv rootdev "'"$targetuuid"'",' -i "$emmc_boot_dir/boot.ini"
 			[[ -f "${TempDir}"/rootfs/boot/boot.ini ]] && sed -e 's,^setenv rootdev.*$,setenv rootdev "'"$targetuuid"'",' -i "${TempDir}"/rootfs/boot/boot.ini
 		fi
 
-		if [[ -f "${TempDir}"/bootfs/boot/extlinux/extlinux.conf ]]; then
-			sed -e 's,root='"$root_uuid"',root='"$targetuuid"',g' -i "${TempDir}"/bootfs/boot/extlinux/extlinux.conf
-			[[ -f "${TempDir}"/bootfs/boot/boot.cmd ]] && rm "${TempDir}"/bootfs/boot/boot.cmd
-		else
-			mkimage -C none -A arm -T script -d "${TempDir}"/bootfs/boot/boot.cmd "${TempDir}"/bootfs/boot/boot.scr	>/dev/null 2>&1 || (echo 'Error while creating U-Boot loader image with mkimage' >&2 ; exit 5)
+		if [[ -f "$emmc_boot_dir/extlinux/extlinux.conf" ]]; then
+			sed -e 's,root='"$root_uuid"',root='"$targetuuid"',g' -i "$emmc_boot_dir/extlinux/extlinux.conf"
+			[[ -f "$emmc_boot_dir/boot.cmd" ]] && rm "$emmc_boot_dir/boot.cmd"
+		elif [[ -f "$emmc_boot_dir/boot.cmd" ]]; then
+			mkimage -C none -A arm -T script -d "$emmc_boot_dir/boot.cmd" "$emmc_boot_dir/boot.scr"	>/dev/null 2>&1 || (echo 'Error while creating U-Boot loader image with mkimage' >&2 ; exit 5)
 		fi
 
 		# fstab adj
 		if [[ "$1" != "$2" ]]; then
-			echo "$emmcbootuuid	/media/mmcboot	ext4    ${mountopts[ext4]}" >> "${TempDir}"/rootfs/etc/fstab
-			echo "/media/mmcboot/boot   				/boot		none	bind								0       0" >> "${TempDir}"/rootfs/etc/fstab
+			if [[ $emmc_boot_direct_mount == yes ]]; then
+				local boot_fstab_type="${eMMCBootFilesystemChoosen:-${BOOTFS_TYPE:-ext4}}"
+				local boot_fstab_options="${mountopts[$boot_fstab_type]:-${mountopts[ext4]}}"
+				if [[ $boot_fstab_type =~ ^(fat|vfat)$ ]]; then
+					boot_fstab_type=vfat
+					boot_fstab_options="defaults 0 2"
+				fi
+				echo "$emmcbootuuid	/boot		$boot_fstab_type	$boot_fstab_options" >> "${TempDir}"/rootfs/etc/fstab
+			else
+				echo "$emmcbootuuid	/media/mmcboot	ext4    ${mountopts[ext4]}" >> "${TempDir}"/rootfs/etc/fstab
+				echo "/media/mmcboot/boot   				/boot		none	bind								0       0" >> "${TempDir}"/rootfs/etc/fstab
+			fi
 		fi
 		# if the rootfstype is not defined as cmdline argument on armbianEnv.txt
-		if ! grep -qE '^rootfstype=.*' "${TempDir}"/bootfs/boot/armbianEnv.txt; then
+		if [[ -f "$emmc_boot_dir/armbianEnv.txt" ]] && ! grep -qE '^rootfstype=.*' "$emmc_boot_dir/armbianEnv.txt"; then
 			# Add the line of type of the selected rootfstype to the file armbianEnv.txt
-			[[ -f "${TempDir}"/bootfs/boot/armbianEnv.txt ]] && echo "rootfstype=$choosen_fs" >> "${TempDir}"/bootfs/boot/armbianEnv.txt
+			echo "rootfstype=$choosen_fs" >> "$emmc_boot_dir/armbianEnv.txt"
 		fi
 
 		if [[ $eMMCFilesystemChoosen =~ ^(btrfs|f2fs)$ ]]; then
 			echo "$targetuuid	/		$choosen_fs	${mountopts[$choosen_fs]}" >> "${TempDir}"/rootfs/etc/fstab
 			# swap file not supported under btrfs but we might have made a partition
 			[[ -n ${emmcswapuuid} ]] && sed -e 's,/var/swap.*,'$emmcswapuuid' 	none		swap	sw								0	0,g' -i "${TempDir}"/rootfs/etc/fstab
-			if [[ -f "${TempDir}"/bootfs/boot/armbianEnv.txt ]]; then
-			    sed -e 's,rootfstype=.*,rootfstype='$eMMCFilesystemChoosen',g' -i "${TempDir}"/bootfs/boot/armbianEnv.txt
+			if [[ -f "$emmc_boot_dir/armbianEnv.txt" ]]; then
+			    sed -e 's,rootfstype=.*,rootfstype='$eMMCFilesystemChoosen',g' -i "$emmc_boot_dir/armbianEnv.txt"
 			else
-			    echo 'rootfstype='$eMMCFilesystemChoosen >>"${TempDir}"/bootfs/boot/armbianEnv.txt
+			    echo 'rootfstype='$eMMCFilesystemChoosen >>"$emmc_boot_dir/armbianEnv.txt"
 			fi
 		else
-			[[ -f "${TempDir}"/bootfs/boot/armbianEnv.txt ]] && sed -e 's,rootfstype=.*,rootfstype='$choosen_fs',g' -i "${TempDir}"/bootfs/boot/armbianEnv.txt
+			[[ -f "$emmc_boot_dir/armbianEnv.txt" ]] && sed -e 's,rootfstype=.*,rootfstype='$choosen_fs',g' -i "$emmc_boot_dir/armbianEnv.txt"
 			echo "$targetuuid	/		$choosen_fs	${mountopts[$choosen_fs]}" >> "${TempDir}"/rootfs/etc/fstab
 		fi
 
@@ -450,7 +471,7 @@ create_armbian()
 			echo "Error: no u-boot package found, exiting"
 			exit 6
 		fi
-		write_uboot_platform "$DIR" $emmccheck
+		BOOTFS_MOUNT="$emmc_boot_dir" write_uboot_platform "$DIR" $emmccheck
 
 	fi
 
@@ -670,6 +691,44 @@ format_nand()
 
 # formatting eMMC [device] example /dev/mmcblk1 - one can select filesystem type
 #
+format_emmc_boot_partition()
+{
+	local boot_partition="$1"
+	local boot_fs="${2:-ext4}"
+
+	case "$boot_fs" in
+		fat|vfat)
+			if ! command -v mkfs.vfat >/dev/null 2>&1; then
+				echo "Error: Filesystem tools for ${boot_fs} not installed, exiting"
+				exit 9
+			fi
+			mkfs.vfat -a -n "${BOOT_FS_LABEL:-boot}" "$boot_partition" >> $logfile 2>&1
+			;;
+		ext4)
+			mkfs.ext4 ${mkopts[ext4]} "$boot_partition" >> $logfile 2>&1
+			;;
+		*)
+			if ! command -v mkfs.${boot_fs} >/dev/null 2>&1; then
+				echo "Error: Filesystem tools for ${boot_fs} not installed, exiting"
+				exit 9
+			fi
+			mkfs.${boot_fs} "$boot_partition" >> $logfile 2>&1
+			;;
+	esac
+}
+
+format_emmc_root_partition()
+{
+	local root_partition="$1"
+	local root_fs="$2"
+
+	if [[ $root_fs == ext4 ]]; then
+		mkfs.ext4 ${mkopts[ext4]} "$root_partition" >> $logfile 2>&1
+	else
+		mkfs.${root_fs} "$root_partition" ${mkopts[$root_fs]} >> $logfile 2>&1
+	fi
+}
+
 format_emmc()
 {
 	# choose and create fs
@@ -684,6 +743,8 @@ format_emmc()
 
 	[[ $? -ne 0 ]] && exit 9
 	eMMCFilesystemChoosen=${FilesystemOptions[(2*$FilesystemChoices)-1]}
+	eMMCBootFilesystemChoosen="${BOOTFS_TYPE:-ext4}"
+	[[ $eMMCBootFilesystemChoosen == vfat ]] && eMMCBootFilesystemChoosen=fat
 
 	# deletes all partitions on eMMC drive
 	dd bs=1 seek=446 count=64 if=/dev/zero of="$1" >/dev/null 2>&1
@@ -708,18 +769,28 @@ format_emmc()
 
 	parted -s "$1" -- mklabel "$PART_TABLE_TYPE"
 	dialog --title "$title" --backtitle "$backtitle" --infobox "\nFormating $1 to $eMMCFilesystemChoosen ... please wait." 5 60
-	# we can't boot from btrfs or f2fs
-	if [[ $eMMCFilesystemChoosen =~ ^(btrfs|f2fs)$ ]]; then
-		local partedFsType="${eMMCFilesystemChoosen}"
-		if [[ $eMMCFilesystemChoosen == "f2fs" ]]; then
-			partedFsType=''
+	local root_parted_fs_type="${eMMCFilesystemChoosen}"
+	if [[ $eMMCFilesystemChoosen == "f2fs" ]]; then
+		root_parted_fs_type=''
+	fi
+	local boot_parted_fs_type="${eMMCBootFilesystemChoosen}"
+	if [[ $eMMCBootFilesystemChoosen =~ ^(fat|vfat)$ ]]; then
+		boot_parted_fs_type='fat32'
+	fi
+
+	# we can't boot from btrfs/f2fs, and some boards declare a dedicated boot fs
+	if [[ -n $BOOTFS_TYPE || $eMMCFilesystemChoosen =~ ^(btrfs|f2fs)$ ]]; then
+
+		if [[ -n $BOOTFS_TYPE ]]; then
+			DEFAULT_BOOTSIZE=${BOOTSIZE:-256}
+			[[ -z $DEFAULT_BOOTSIZE || $DEFAULT_BOOTSIZE -le 8 ]] && DEFAULT_BOOTSIZE=256
+		else
+			DEFAULT_BOOTSIZE=512
 		fi
-
-		# default boot partition size, in MiB
-		DEFAULT_BOOTSIZE=512
-
-		# (convert to sectors for partitioning)
 		DEFAULT_BOOTSIZE_SECTORS=$(((${DEFAULT_BOOTSIZE} * 1024 * 1024) / 512))
+		local boot_start=${FIRSTSECTOR}
+		local boot_end=$(( boot_start + DEFAULT_BOOTSIZE_SECTORS - 1 ))
+		local root_start=$(( boot_end + 1 ))
 
 		# check if the filesystem tools are actually installed
 		if ! command -v mkfs.${eMMCFilesystemChoosen} >/dev/null 2>&1; then
@@ -731,24 +802,25 @@ format_emmc()
 		grep -q swap /etc/fstab
 		case $? in
 			0)
-				parted -s "$1" -- mkpart primary $partedFsType ${FIRSTSECTOR}s $(( ${FIRSTSECTOR} + ${DEFAULT_BOOTSIZE_SECTORS} - 1 ))s
-				parted -s "$1" -- mkpart primary $partedFsType $(( ${FIRSTSECTOR} + ${DEFAULT_BOOTSIZE_SECTORS} ))s $(( ${FIRSTSECTOR} + 393215 ))s
-				parted -s "$1" -- mkpart primary $partedFsType $(( ${FIRSTSECTOR} + 393216 ))s ${LASTSECTOR}s
+				local swap_end=$(( root_start + 393215 ))
+				parted -s "$1" -- mkpart primary $boot_parted_fs_type ${boot_start}s ${boot_end}s
+				parted -s "$1" -- mkpart primary linux-swap ${root_start}s ${swap_end}s
+				parted -s "$1" -- mkpart primary $root_parted_fs_type $(( swap_end + 1 ))s ${LASTSECTOR}s
 				partprobe "$1"
-				mkfs.ext4 ${mkopts[ext4]} "$1"'p1' >> $logfile 2>&1
+				format_emmc_boot_partition "$1"'p1' "$eMMCBootFilesystemChoosen"
 				mkswap "$1"'p2' >> $logfile 2>&1
-				mkfs.${eMMCFilesystemChoosen} "$1"'p3' ${mkopts[$eMMCFilesystemChoosen]} >> $logfile 2>&1
+				format_emmc_root_partition "$1"'p3' "$eMMCFilesystemChoosen"
 				emmcbootuuid=$(blkid -o export "$1"'p1' | grep -w UUID)
 				emmcswapuuid=$(blkid -o export "$1"'p2' | grep -w UUID)
 				emmcuuid=$(blkid -o export "$1"'p3' | grep -w UUID)
 				dest_root=$emmccheck'p3'
 				;;
 			*)
-				parted -s "$1" -- mkpart primary $partedFsType ${FIRSTSECTOR}s $(( ${FIRSTSECTOR} + ${DEFAULT_BOOTSIZE_SECTORS} - 1 ))s
-				parted -s "$1" -- mkpart primary $partedFsType $(( ${FIRSTSECTOR} + ${DEFAULT_BOOTSIZE_SECTORS} ))s ${LASTSECTOR}s
+				parted -s "$1" -- mkpart primary $boot_parted_fs_type ${boot_start}s ${boot_end}s
+				parted -s "$1" -- mkpart primary $root_parted_fs_type ${root_start}s ${LASTSECTOR}s
 				partprobe "$1"
-				mkfs.ext4 ${mkopts[ext4]} "$1"'p1' >> $logfile 2>&1
-				mkfs.${eMMCFilesystemChoosen} "$1"'p2' ${mkopts[$eMMCFilesystemChoosen]} >> $logfile 2>&1
+				format_emmc_boot_partition "$1"'p1' "$eMMCBootFilesystemChoosen"
+				format_emmc_root_partition "$1"'p2' "$eMMCFilesystemChoosen"
 				emmcbootuuid=$(blkid -o export "$1"'p1' | grep -w UUID)
 				emmcuuid=$(blkid -o export "$1"'p2' | grep -w UUID)
 				dest_root=$emmccheck'p2'

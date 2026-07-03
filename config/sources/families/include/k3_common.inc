@@ -108,8 +108,65 @@ function format_partitions() {
 }
 
 function write_uboot_platform() {
-	cp $1/tiboot3.bin ${MOUNT}/boot
-	cp $1/sysfw.itb ${MOUNT}/boot || true
-	cp $1/tispl.bin ${MOUNT}/boot
-	cp $1/u-boot.img ${MOUNT}/boot
+	local uboot_dir="$1"
+	local target_device="$2"
+	local boot_mount="${BOOTFS_MOUNT:-}"
+	local cleanup_mount=no
+
+	if [[ -b "${target_device}" && -z "${MOUNT:-}" ]]; then
+		parted -s "${target_device}" set 1 boot on >/dev/null 2>&1 || true
+		parted -s "${target_device}" set 1 bls_boot off >/dev/null 2>&1 || true
+		sfdisk --part-type "${target_device}" 1 e >/dev/null 2>&1 || true
+		partprobe "${target_device}" >/dev/null 2>&1 || true
+	fi
+
+	if [[ -z "${boot_mount}" && -n "${MOUNT:-}" && -d "${MOUNT}/boot" ]]; then
+		boot_mount="${MOUNT}/boot"
+	fi
+
+	if [[ -z "${boot_mount}" ]]; then
+		local boot_partition=""
+		if [[ -b "${target_device}p1" ]]; then
+			boot_partition="${target_device}p1"
+		elif [[ -b "${target_device}1" ]]; then
+			boot_partition="${target_device}1"
+		elif [[ -b "${target_device}" ]]; then
+			boot_partition="${target_device}"
+		fi
+
+		if [[ -z "${boot_partition}" ]]; then
+			echo "Unable to locate K3 boot partition on ${target_device}"
+			exit 1
+		fi
+
+		boot_mount=$(mktemp -d /mnt/k3-uboot.XXXXXX)
+		if ! mount "${boot_partition}" "${boot_mount}"; then
+			rmdir "${boot_mount}"
+			echo "Unable to mount K3 boot partition ${boot_partition}"
+			exit 1
+		fi
+		cleanup_mount=yes
+	fi
+
+	if [[ ! -d "${boot_mount}" ]]; then
+		echo "K3 boot mount ${boot_mount} does not exist"
+		exit 1
+	fi
+
+	local copy_status=0
+	cp "${uboot_dir}/tiboot3.bin" "${boot_mount}" || copy_status=$?
+	cp "${uboot_dir}/sysfw.itb" "${boot_mount}" || true
+	cp "${uboot_dir}/tispl.bin" "${boot_mount}" || copy_status=$?
+	cp "${uboot_dir}/u-boot.img" "${boot_mount}" || copy_status=$?
+	sync
+
+	if [[ "${cleanup_mount}" == yes ]]; then
+		umount "${boot_mount}"
+		rmdir "${boot_mount}"
+	fi
+
+	if [[ $copy_status -ne 0 ]]; then
+		echo "Unable to copy K3 bootloader files into ${boot_mount}"
+		exit "$copy_status"
+	fi
 }
