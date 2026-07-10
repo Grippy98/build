@@ -118,6 +118,11 @@ function memoized_git_ref_to_info() {
 					url="${git_source}/plain/Makefile?h=${sha1}"
 					;;
 
+				"https://git.toradex.com/"*)
+					declare toradex_cgit_path="${git_source#https://git.toradex.com/}"
+					url="https://git.toradex.com/cgit/${toradex_cgit_path}/plain/Makefile?h=${sha1}"
+					;;
+
 				"https://kernel.googlesource.com/pub/scm/linux/kernel/git/stable/linux-stable.git" | "https://mirrors.tuna.tsinghua.edu.cn/git/linux-stable.git" | "https://mirrors.bfsu.edu.cn/git/linux-stable.git")
 					# for mainline kernel source, only the origin source support curl
 					case "${GITHUB_MIRROR}" in
