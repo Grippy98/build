@@ -18,6 +18,19 @@ ubuntu-*-cloudimg-console.log
 /*userpatches*/
 /userpatches
 
+# Track the BeagleY-AI/J722S EdgeAI patches used by the netboot lab.
+# Keep all other local userpatch content ignored.
+!/userpatches/
+/userpatches/*
+!/userpatches/kernel/
+/userpatches/kernel/*
+!/userpatches/kernel/archive/
+/userpatches/kernel/archive/*
+!/userpatches/kernel/archive/k3-beagle-6.12/
+/userpatches/kernel/archive/k3-beagle-6.12/*
+!/userpatches/kernel/archive/k3-beagle-6.12/0001-arm64-dts-ti-j722s-edgeai-memory-map.patch
+!/userpatches/kernel/archive/k3-beagle-6.12/0002-arm64-dts-ti-beagley-ai-csi0-imx219.patch
+
 ### General annoyances ###
 .DS_Store
 *~
