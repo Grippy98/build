@@ -1,0 +1,17 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0
+# The built-in DisplayPort bridge needs firmware before mounting the rootfs.
+
+set -e
+
+case "$1" in
+	prereqs) exit 0 ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+# copy_file returns 1 when another hook already included the same file.
+copy_file firmware /lib/firmware/updates/cadence/mhdp8546.bin || {
+	status=$?
+	[ "$status" -eq 1 ] || exit "$status"
+}
